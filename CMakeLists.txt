@@ -21,7 +21,10 @@ target_link_libraries(tpcc_common PUBLIC ${Boost_LIBRARIES})
 target_link_libraries(tpcc_common PUBLIC telldb)
 
 set(SERVER_SRC
-    server/main.cpp)
+    server/main.cpp
+    server/Connection.cpp
+    server/CreateSchema.cpp)
+
 set(CLIENT_SRC
     client/main.cpp)
 

@@ -20,6 +20,96 @@
  *     Kevin Bocksrocker <kevin.bocksrocker@gmail.com>
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
+#include "Connection.hpp"
 #include <crossbow/program_options.hpp>
+#include <crossbow/logger.hpp>
+#include <telldb/TellDB.hpp>
 
-int main() {}
+#include <boost/asio.hpp>
+#include <string>
+#include <iostream>
+
+using namespace crossbow::program_options;
+using namespace boost::asio;
+
+void accept(boost::asio::io_service &service,
+        boost::asio::ip::tcp::acceptor &a) {
+    auto conn = new tpcc::Connection(service);
+    a.async_accept(conn->socket(), [conn, &service, &a](const boost::system::error_code &err) {
+        if (err) {
+            delete conn;
+            LOG_ERROR(err.message());
+            return;
+        }
+        conn->run();
+        accept(service, a);
+    });
+}
+
+int main(int argc, const char** argv) {
+    bool help = false;
+    std::string host;
+    std::string port("8713");
+    std::string logLevel("DEBUG");
+    crossbow::string commitManager;
+    crossbow::string storageNodes;
+    auto opts = create_options("tpcc_server",
+            value<'h'>("help", &help, tag::description{"print help"}),
+            value<'H'>("host", &host, tag::description{"Host to bind to"}),
+            value<'p'>("port", &port, tag::description{"Port to bind to"}),
+            value<'l'>("log-level", &logLevel, tag::description{"The log level"}),
+            value<'c'>("commit-manager", &commitManager, tag::description{"Address to the commit manager"}),
+            value<'s'>("storage-nodes", &storageNodes, tag::description{"Semicolon-separated list of storage node addresses"})
+            );
+    try {
+        parse(opts, argc, argv);
+    } catch (argument_not_found& e) {
+        std::cerr << e.what() << std::endl << std::endl;
+        print_help(std::cout, opts);
+        return 1;
+    }
+    if (help) {
+        print_help(std::cout, opts);
+        return 0;
+    }
+    crossbow::logger::logger->config.level = crossbow::logger::logLevelFromString(logLevel);
+    tell::store::ClientConfig config;
+    config.commitManager = config.parseCommitManager(commitManager);
+    config.tellStore = config.parseTellStore(storageNodes);
+    tell::db::ClientManager<void> clientManager(config);
+    try {
+        io_service service;
+        ip::tcp::acceptor a(service);
+        ip::tcp::resolver resolver(service);
+        ip::tcp::resolver::iterator iter;
+        if (host == "") {
+            iter = resolver.resolve(ip::tcp::resolver::query(port));
+        } else {
+            iter = resolver.resolve(ip::tcp::resolver::query(host, port));
+        }
+        ip::tcp::resolver::iterator end;
+        for (; iter != end; ++iter) {
+            boost::system::error_code err;
+            auto endpoint = iter->endpoint();
+            auto protocol = iter->endpoint().protocol();
+            a.open(protocol);
+            a.bind(endpoint, err);
+            if (err) {
+                a.close();
+                LOG_WARN("Bind attempt failed " + err.message());
+                continue;
+            }
+            break;
+        }
+        if (!a.is_open()) {
+            LOG_ERROR("Could not bind");
+            return 1;
+        }
+        a.listen();
+        // we do not need to delete this object, it will delete itself
+        accept(service, a);
+        service.run();
+    } catch (std::exception& e) {
+        std::cerr << e.what() << std::endl;
+    }
+}

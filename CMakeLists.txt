@@ -4,11 +4,12 @@ project(tpcc)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(TellDB REQUIRED)
 find_package(Crossbow REQUIRED)
+find_package(LLVM REQUIRED)
 
 set(COMMON_SRC
     common/Commands.cpp)
 
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mcx16")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mcx16 -ftemplate-depth=512")
 
 add_library(tpcc_common STATIC ${COMMON_SRC})
 # Workaround for link failure with GCC 5 (GCC Bug 65913)
@@ -23,6 +24,7 @@ target_link_libraries(tpcc_common PUBLIC telldb)
 set(SERVER_SRC
     server/main.cpp
     server/Connection.cpp
+    server/Populate.cpp
     server/CreateSchema.cpp)
 
 set(CLIENT_SRC

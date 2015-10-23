@@ -48,9 +48,8 @@ void createWarehouse(db::Transaction& transaction) {
 
 void createDistrict(db::Transaction& transaction) {
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    // Primary key is storage key and is two 32 bit numbers:
-    // (d_w_id, d_id)
-    // d_id is 1 byte
+    // Primary key: (d_w_id, d_id)
+    //              ( 2 b    1 byte
     schema.addField(store::FieldType::SMALLINT, "d_id", true);
     schema.addField(store::FieldType::SMALLINT, "d_w_id", true);
     schema.addField(store::FieldType::TEXT, "d_name", true);
@@ -71,7 +70,7 @@ void createCustomer(db::Transaction& transaction) {
     // c_d_id: 1 byte
     // c_id: 2 bytes
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::INT, "c_id", true);
+    schema.addField(store::FieldType::SMALLINT, "c_id", true);
     schema.addField(store::FieldType::SMALLINT, "c_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "c_w_id", true);
     schema.addField(store::FieldType::TEXT, "c_first", true);
@@ -148,7 +147,7 @@ void createOrderLine(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "ol_quantity", true);
     schema.addField(store::FieldType::INT, "ol_amount", true);
     schema.addField(store::FieldType::TEXT, "ol_dist_info", true);
-    transaction.createTable("order", schema);
+    transaction.createTable("order-line", schema);
 }
 
 void createItem(db::Transaction& transaction) {
@@ -160,7 +159,7 @@ void createItem(db::Transaction& transaction) {
     schema.addField(store::FieldType::TEXT, "i_name", true);
     schema.addField(store::FieldType::INT, "i_price", true);
     schema.addField(store::FieldType::TEXT, "i_data", true);
-    transaction.createTable("order", schema);
+    transaction.createTable("item", schema);
 }
 
 void createStock(db::Transaction& transaction) {
@@ -184,7 +183,7 @@ void createStock(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "s_order_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "s_remote_cnt", true);
     schema.addField(store::FieldType::TEXT, "s_data", true);
-    transaction.createTable("order", schema);
+    transaction.createTable("stock", schema);
 }
 
 } // anonymouse namespace

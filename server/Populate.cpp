@@ -45,7 +45,7 @@ Int NURand(Gen& g, Int A, Int x, Int y)
 void Populator::populateItems(tell::db::Transaction& transaction) {
     auto tIdFuture = transaction.openTable("item");
     auto tId = tIdFuture.get();
-    for (int i = 1; i <= 100000u; ++i) {
+    for (int i = 1; i <= 100000; ++i) {
         transaction.insert(tId, tell::db::key_t{uint64_t(i)},
                 std::make_tuple(i, // i_id
                     int(randomWithin(1, 10000)), // i_im_id
@@ -119,7 +119,7 @@ void Populator::populateDistricts(tell::db::Transaction& transaction, int16_t w_
     uint64_t keyBase = w_id;
     keyBase = keyBase << 8;
     auto n = now();
-    for (int16_t i = 1u; i <= 10u; ++i) {
+    for (int16_t i = 1u; i <= 10; ++i) {
         uint64_t key = keyBase | uint64_t(i);
         transaction.insert(table, tell::db::key_t{key}, std::make_tuple(
                     i, // d_i_d

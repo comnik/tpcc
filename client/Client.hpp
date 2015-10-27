@@ -21,26 +21,32 @@
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
 #pragma once
-#include <vector>
 #include <boost/asio.hpp>
-
 #include <common/Protocol.hpp>
-
-#include <telldb/TellDB.hpp>
 
 namespace tpcc {
 
-class CommandImpl;
-
-class Connection {
-    boost::asio::ip::tcp::socket mSocket;
-    std::unique_ptr<CommandImpl> mImpl;
+class Client {
+    using Socket = boost::asio::ip::tcp::socket;
+    Socket mSocket;
+    client::CommandsImpl mCmds;
 public:
-    Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager);
-    ~Connection();
-    decltype(mSocket)& socket() { return mSocket; }
+    Client(boost::asio::io_service& service)
+        : mSocket(service)
+        , mCmds(mSocket)
+    {}
+    Socket& socket() {
+        return mSocket;
+    }
+    const Socket& socket() const {
+        return mSocket;
+    }
+    client::CommandsImpl& commands() {
+        return mCmds;
+    }
     void run();
+    void populate(int16_t from, int16_t to);
 };
 
-} // namespace tpcc
+}
 

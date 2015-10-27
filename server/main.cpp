@@ -33,16 +33,17 @@ using namespace crossbow::program_options;
 using namespace boost::asio;
 
 void accept(boost::asio::io_service &service,
-        boost::asio::ip::tcp::acceptor &a) {
-    auto conn = new tpcc::Connection(service);
-    a.async_accept(conn->socket(), [conn, &service, &a](const boost::system::error_code &err) {
+        boost::asio::ip::tcp::acceptor &a,
+        tell::db::ClientManager<void>& clientManager) {
+    auto conn = new tpcc::Connection(service, clientManager);
+    a.async_accept(conn->socket(), [conn, &service, &a, &clientManager](const boost::system::error_code &err) {
         if (err) {
             delete conn;
             LOG_ERROR(err.message());
             return;
         }
         conn->run();
-        accept(service, a);
+        accept(service, a, clientManager);
     });
 }
 
@@ -107,7 +108,7 @@ int main(int argc, const char** argv) {
         }
         a.listen();
         // we do not need to delete this object, it will delete itself
-        accept(service, a);
+        accept(service, a, clientManager);
         service.run();
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;

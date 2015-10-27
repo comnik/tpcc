@@ -7,7 +7,9 @@ find_package(Crossbow REQUIRED)
 find_package(LLVM REQUIRED)
 
 set(COMMON_SRC
-    common/Commands.cpp)
+    common/Protocol.cpp)
+
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -mcx16 -ftemplate-depth=512")
 
@@ -28,7 +30,8 @@ set(SERVER_SRC
     server/CreateSchema.cpp)
 
 set(CLIENT_SRC
-    client/main.cpp)
+    client/main.cpp
+    client/Client.cpp)
 
 add_executable(tpcc_server ${SERVER_SRC})
 target_include_directories(tpcc_server PUBLIC ${Crossbow_INCLUDE_DIRS})

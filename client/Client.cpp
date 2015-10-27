@@ -20,27 +20,34 @@
  *     Kevin Bocksrocker <kevin.bocksrocker@gmail.com>
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
-#pragma once
-#include <vector>
-#include <boost/asio.hpp>
-
+#include "Client.hpp"
 #include <common/Protocol.hpp>
+#include <crossbow/logger.hpp>
 
-#include <telldb/TellDB.hpp>
+using err_code = boost::system::error_code;
 
 namespace tpcc {
 
-class CommandImpl;
+void Client::run() {
+}
 
-class Connection {
-    boost::asio::ip::tcp::socket mSocket;
-    std::unique_ptr<CommandImpl> mImpl;
-public:
-    Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager);
-    ~Connection();
-    decltype(mSocket)& socket() { return mSocket; }
-    void run();
-};
+void Client::populate(int16_t lower, int16_t upper) {
+    mCmds.execute<Command::POPULATE_WAREHOUSE>(
+            [this, lower, upper](const err_code& ec, const std::tuple<bool, crossbow::string>& res){
+                if (ec) {
+                    LOG_ERROR(ec.message());
+                    return;
+                }
+                if (std::get<0>(res)) {
+                    LOG_ERROR(std::get<1>(res));
+                    return;
+                }
+                LOG_INFO(("Populated Warehouse " + crossbow::to_string(lower)));
+                if (lower == upper) return; // population done
+                populate(lower + 1, upper);
+            },
+            lower);
+}
 
 } // namespace tpcc
 

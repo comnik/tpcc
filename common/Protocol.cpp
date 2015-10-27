@@ -20,27 +20,7 @@
  *     Kevin Bocksrocker <kevin.bocksrocker@gmail.com>
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
-#pragma once
-#include <vector>
-#include <boost/asio.hpp>
+#include "Protocol.hpp"
 
-#include <common/Protocol.hpp>
 
-#include <telldb/TellDB.hpp>
-
-namespace tpcc {
-
-class CommandImpl;
-
-class Connection {
-    boost::asio::ip::tcp::socket mSocket;
-    std::unique_ptr<CommandImpl> mImpl;
-public:
-    Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager);
-    ~Connection();
-    decltype(mSocket)& socket() { return mSocket; }
-    void run();
-};
-
-} // namespace tpcc
 

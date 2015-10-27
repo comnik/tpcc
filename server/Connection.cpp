@@ -21,26 +21,89 @@
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
 #include "Connection.hpp"
+#include "CreateSchema.hpp"
+#include "Populate.hpp"
+
+#include <telldb/Transaction.hpp>
 
 using namespace boost::asio;
 
 namespace tpcc {
 
-Connection::Connection(boost::asio::io_service& service)
+class CommandImpl {
+    server::Server<CommandImpl> mServer;
+    boost::asio::io_service& mService;
+    tell::db::ClientManager<void>& mClientManager;
+    std::unique_ptr<tell::db::TransactionFiber<void>> mFiber;
+public:
+    CommandImpl(boost::asio::ip::tcp::socket& socket,
+            boost::asio::io_service& service,
+            tell::db::ClientManager<void>& clientManager)
+        : mServer(*this, socket)
+        , mService(service)
+        , mClientManager(clientManager)
+    {}
+    void run() {
+        mServer.run();
+    }
+
+    template<Command C, class Callback>
+    typename std::enable_if<C == Command::CREATE_SCHEMA, void>::type
+    execute(const std::tuple<>& args, const Callback callback) {
+        auto transaction = [this, callback](tell::db::Transaction& tx){
+            bool success;
+            crossbow::string msg;
+            try {
+                createSchema(tx);
+                tx.commit();
+                success = true;
+            } catch (std::exception& ex) {
+                tx.rollback();
+                success = false;
+                msg = ex.what();
+            }
+            mService.post([this, callback, success, msg](){
+                mFiber.reset(nullptr);
+                callback(std::make_tuple(success, msg));
+            });
+        };
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+    }
+
+    template<Command C, class Callback>
+    typename std::enable_if<C == Command::POPULATE_WAREHOUSE, void>::type
+    execute(const std::tuple<int16_t>& args, const Callback& callback) {
+        auto transaction = [this, args, callback](tell::db::Transaction& tx) {
+            bool success;
+            crossbow::string msg;
+            try {
+                Populator populator;
+                populator.populateWarehouse(tx, std::get<0>(args));
+                tx.commit();
+                success = true;
+            } catch (std::exception& ex) {
+                tx.rollback();
+                success = false;
+                msg = ex.what();
+            }
+            mService.post([this, success, msg, callback](){
+                mFiber.reset(nullptr);
+                callback(std::make_pair(success, msg));
+            });
+        };
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+    }
+};
+
+Connection::Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager)
     : mSocket(service)
-    , mBuffer(1024)
+    , mImpl(new CommandImpl(mSocket, service, clientManager))
 {}
 
-void Connection::run() {
-    mSocket.async_read_some(buffer(mBuffer), [this](const boost::system::error_code& ec, size_t received){
-        read(received);
-    });
-}
+Connection::~Connection() = default;
 
-void Connection::read(size_t received) {
-    async_write(mSocket, buffer(mBuffer, received), [this](const boost::system::error_code& ec, size_t written) {
-        run();
-    });
+void Connection::run() {
+    mImpl->run();
 }
 
 } // namespace tpcc

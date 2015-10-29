@@ -4,10 +4,10 @@ project(tpcc)
 find_package(Boost REQUIRED COMPONENTS system)
 find_package(TellDB REQUIRED)
 find_package(Crossbow REQUIRED)
-find_package(LLVM REQUIRED)
 
 set(COMMON_SRC
-    common/Protocol.cpp)
+    common/Protocol.cpp
+    common/Util.cpp)
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
@@ -27,7 +27,10 @@ set(SERVER_SRC
     server/main.cpp
     server/Connection.cpp
     server/Populate.cpp
-    server/CreateSchema.cpp)
+    server/CreateSchema.cpp
+    server/NewOrder.cpp
+    server/Payment.cpp
+    server/OrderStatus.cpp)
 
 set(CLIENT_SRC
     client/main.cpp

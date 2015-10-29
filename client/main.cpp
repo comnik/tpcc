@@ -79,7 +79,7 @@ int main(int argc, const char** argv) {
             iter = resolver.resolve(ip::tcp::resolver::query(host, port));
         }
         auto wareHousesPerClient = numWarehouses / numClients;
-        for (int i = 0; i < numClients; ++i) {
+        for (decltype(numClients) i = 0; i < numClients; ++i) {
             clients.emplace_back(service);
             boost::asio::connect(clients[i].socket(), iter);
             LOG_INFO(("Connected to client" + crossbow::to_string(i)));
@@ -100,7 +100,7 @@ int main(int argc, const char** argv) {
                     LOG_ERROR(std::get<1>(res));
                     return;
                 }
-                for (int i = 0; i < numClients; ++i) {
+                for (decltype(numClients) i = 0; i < numClients; ++i) {
                     auto upper = int16_t(int16_t(wareHousesPerClient * (i + 1)));
                     if (i + 1 == numClients) {
                         upper = numWarehouses;

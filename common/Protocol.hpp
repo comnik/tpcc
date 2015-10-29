@@ -27,16 +27,47 @@
 
 #include <boost/system/error_code.hpp>
 #include <boost/asio.hpp>
+#include <boost/preprocessor.hpp>
 
 #include <crossbow/Serializer.hpp>
 #include <crossbow/string.hpp>
 
+#define GEN_COMMANDS_ARR(Name, arr) enum class Name {\
+    BOOST_PP_ARRAY_ELEM(0, arr) = 1, \
+    BOOST_PP_ARRAY_ENUM(BOOST_PP_ARRAY_REMOVE(arr, 0)) \
+} 
+
+#define GEN_COMMANDS(Name, TUPLE) GEN_COMMANDS_ARR(Name, (BOOST_PP_TUPLE_SIZE(TUPLE), TUPLE))
+
+#define EXPAND_CASE(r, t) case BOOST_PP_TUPLE_ELEM(2, 0, t)::BOOST_PP_ARRAY_ELEM(0, BOOST_PP_TUPLE_ELEM(2, 1, t)): \
+    execute<BOOST_PP_TUPLE_ELEM(2, 0, t)::BOOST_PP_ARRAY_ELEM(0, BOOST_PP_TUPLE_ELEM(2, 1, t))>();\
+    break;
+
+#define SWITCH_PREDICATE(r, state) BOOST_PP_ARRAY_SIZE(BOOST_PP_TUPLE_ELEM(2, 1, state))
+
+#define SWITCH_REMOVE_ELEM(r, state) (\
+        BOOST_PP_TUPLE_ELEM(2, 0, state), \
+        BOOST_PP_ARRAY_REMOVE(BOOST_PP_TUPLE_ELEM(2, 1, state), 0) \
+        )\
+
+#define SWITCH_CASE_IMPL(Name, Param, arr) switch (Param) {\
+    BOOST_PP_FOR((Name, arr), SWITCH_PREDICATE, SWITCH_REMOVE_ELEM, EXPAND_CASE) \
+}
+
+#define SWITCH_CASE(Name, Param, t) SWITCH_CASE_IMPL(Name, Param, (BOOST_PP_TUPLE_SIZE(t), t))
+
 namespace tpcc {
 
-enum class Command {
-    POPULATE_WAREHOUSE = 1,
-    CREATE_SCHEMA
-};
+#define COMMANDS (POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS)
+
+GEN_COMMANDS(Command, COMMANDS);
+
+//enum class Command {
+//    POPULATE_WAREHOUSE = 1,
+//    CREATE_SCHEMA,
+//    NEW_ORDER,
+//    PAYMENT
+//};
 
 template<Command C>
 struct Signature;
@@ -53,91 +84,170 @@ struct Signature<Command::CREATE_SCHEMA> {
     using arguments = std::tuple<>;
 };
 
+struct NewOrderIn {
+    int16_t w_id;
+    int16_t d_id;
+    int16_t c_id;
+};
+
+struct NewOrderResult {
+    using is_serializable = crossbow::is_serializable;
+    struct OrderLine {
+        int16_t ol_supply_w_id;
+        int32_t ol_i_id;
+        crossbow::string i_name;
+        int16_t ol_quantity;
+        int32_t s_quantity;
+        char brand_generic;
+        int32_t i_price;
+        int32_t ol_amount;
+
+        template<class Archiver>
+        void operator&(Archiver& ar) {
+            ar & ol_supply_w_id;
+            ar & ol_i_id;
+            ar & i_name;
+            ar & ol_quantity;
+            ar & s_quantity;
+            ar & brand_generic;
+            ar & i_price;
+            ar & ol_amount;
+        }
+    };
+    bool success = true;
+    crossbow::string error;
+    int32_t o_id;
+    int16_t o_ol_cnt;
+    crossbow::string c_last;
+    int16_t c_credit;
+    int32_t c_discount;
+    int32_t w_tax;
+    int32_t d_tax;
+    int64_t o_entry_d;
+    int32_t total_amount;
+    std::vector<OrderLine> lines;
+
+    template<class Archiver>
+    void operator&(Archiver& ar) const {
+        ar & success = true;
+        ar & error;
+        ar & o_id;
+        ar & o_ol_cnt;
+        ar & c_last;
+        ar & c_credit;
+        ar & c_discount;
+        ar & w_tax;
+        ar & d_tax;
+        ar & o_entry_d;
+        ar & total_amount;
+        ar & lines;
+    }
+};
+
+template<>
+struct Signature<Command::NEW_ORDER> {
+    using result = NewOrderResult;
+    using arguments = NewOrderIn;
+};
+
+struct PaymentIn {
+    using is_serializable = crossbow::is_serializable;
+    bool selectByLastName;
+    int16_t w_id;
+    int16_t d_id;
+    int16_t c_id;
+    int16_t c_w_id;
+    int16_t c_d_id;
+    crossbow::string c_last;
+    int32_t h_amount;
+
+    template<class Archiver>
+    void operator&(Archiver& ar) {
+        ar & selectByLastName;
+        ar & w_id;
+        ar & d_id;
+        ar & c_id;
+        ar & c_w_id;
+        ar & c_d_id;
+        ar & c_last;
+        ar & h_amount;
+    }
+};
+
+struct PaymentResult {
+    using is_serializable = crossbow::is_serializable;
+    bool success = true;
+    crossbow::string error;
+
+    template<class Archiver>
+    void operator&(Archiver& ar) {
+        ar & success;
+        ar & error;
+    }
+};
+
+template<>
+struct Signature<Command::PAYMENT> {
+    using result = PaymentResult;
+    using arguments = PaymentIn;
+};
+
+struct OrderStatusIn {
+    using is_serializable = crossbow::is_serializable;
+    bool selectByLastName;
+    int16_t w_id;
+    int16_t d_id;
+    int16_t c_id;
+    crossbow::string c_last;
+
+    template<class A>
+    void operator&(A& ar) {
+        ar & selectByLastName;
+        ar & w_id;
+        ar & d_id;
+        ar & c_id;
+        ar & c_last;
+    }
+};
+
+struct OrderStatusResult {
+    using is_serializable = crossbow::is_serializable;
+    bool success;
+    crossbow::string error;
+
+    template<class A>
+    void operator&(A& ar) {
+        ar & success;
+        ar & error;
+    }
+};
+
+template<>
+struct Signature<Command::ORDER_STATUS> {
+    using arguments = OrderStatusIn;
+    using result = OrderStatusResult;
+};
+
 namespace impl {
 
 template<class... Args>
-struct SerializeHelper;
+struct ArgSerializer;
 
 template<class Head, class... Tail>
-struct SerializeHelper<Head, Tail...> {
-    SerializeHelper<Tail...> mTail;
-    void size(crossbow::sizer& sizer, const Head& head, const Tail&... tail) const {
-        sizer & head;
-        mTail.size(sizer, tail...);
-    }
-    void serialize(crossbow::serializer& ser, const Head& head, const Tail&... tail) const {
-        ser & head;
-        mTail.serialize(ser, tail...);
+struct ArgSerializer<Head, Tail...> {
+    ArgSerializer<Tail...> rest;
+
+    template<class C>
+    void exec(C& c, const Head& head, const Tail&... tail) const {
+        c & head;
+        rest.exec(c, tail...);
     }
 };
 
 template<>
-struct SerializeHelper<> {
-    void size(crossbow::sizer& sizer) const {
-    }
-    void serialize(crossbow::serializer& ser) const {
-    }
-};
-
-template<size_t Idx, class Tuple>
-struct TupleSerializer {
-    TupleSerializer<Idx - 1, Tuple> mChild;
-    void size(crossbow::sizer& sizer, const Tuple& tuple) const {
-        sizer & std::get<Idx>(tuple);
-        mChild.size(sizer, tuple);
-    }
-
-    void serialize(crossbow::serializer& ser, const Tuple& tuple) const {
-        mChild.serialize(ser, tuple);
-        ser & std::get<Idx>(tuple);
-    }
-};
-
-template<class Tuple>
-struct TupleSerializer<0, Tuple> {
-    template<size_t Sz = std::tuple_size<Tuple>::value>
-    typename std::enable_if<Sz != 0, void>::type size(crossbow::sizer& sizer, const Tuple& tuple) const {
-        sizer & std::get<0>(tuple);
-    }
-    template<size_t Sz = std::tuple_size<Tuple>::value>
-    typename std::enable_if<Sz == 0, void>::type size(crossbow::sizer& sizer, const Tuple& tuple) const {
-    }
-
-    template<size_t Sz = std::tuple_size<Tuple>::value>
-    typename std::enable_if<Sz != 0, void>::type serialize(crossbow::serializer& ser, const Tuple& tuple) const {
-        ser & std::get<0>(tuple);
-    }
-    template<size_t Sz = std::tuple_size<Tuple>::value>
-    typename std::enable_if<Sz == 0, void>::type serialize(crossbow::serializer& ser, const Tuple& tuple) const {
-    }
-};
-
-template<size_t Idx, class Tuple>
-struct DeserializeHelper {
-    DeserializeHelper<Idx - 1, Tuple> mChild;
-    void deserialize(crossbow::deserializer& d, Tuple& t) const {
-        mChild.deserialize(d, t);
-        d & std::get<Idx>(t);
-    }
-};
-
-template<>
-struct DeserializeHelper<0, std::tuple<>> {
-    void deserialize(crossbow::deserializer& d, std::tuple<>& t) const {
-    }
-};
-
-template<class Tuple>
-struct DeserializeHelper<static_cast<size_t>(0), Tuple> {
-
-    template<size_t Sz = std::tuple_size<Tuple>::value>
-    typename std::enable_if<Sz != 0, void>::type deserialize(crossbow::deserializer& d, Tuple& t) const {
-        d & std::get<0>(t);
-    }
-
-    template<size_t Sz = std::tuple_size<Tuple>::value>
-    typename std::enable_if<Sz == 0, void>::type deserialize(crossbow::deserializer& d, Tuple& t) const {
-    }
+struct ArgSerializer<> {
+    template<class C>
+    void exec(C&) const {}
 };
 
 }
@@ -146,11 +256,11 @@ namespace client {
 
 class CommandsImpl {
     boost::asio::ip::tcp::socket& mSocket;
+    size_t mCurrSize = 1024;
     std::unique_ptr<uint8_t[]> mCurrentRequest;
-    size_t mCurrSize;
 public:
     CommandsImpl(boost::asio::ip::tcp::socket& socket)
-        : mSocket(socket), mCurrentRequest(new uint8_t[1024])
+        : mSocket(socket), mCurrentRequest(new uint8_t[mCurrSize])
     {
     }
     template<class Callback, class Result>
@@ -161,8 +271,7 @@ public:
             Result res;
             boost::system::error_code noError;
             crossbow::deserializer ser(mCurrentRequest.get() + sizeof(size_t));
-            impl::DeserializeHelper<std::tuple_size<Result>::value - 1, Result> des;
-            des.deserialize(ser, res);
+            ser & res;
             callback(noError, res);
             return;
         } else if (bytes_read >= 8 && respSize > mCurrSize) {
@@ -187,14 +296,17 @@ public:
         using ResType = typename Signature<C>::result;
         crossbow::sizer sizer;
         sizer & sizer.size;
-        impl::SerializeHelper<Args...> argSerializer;
-        argSerializer.size(sizer, args...);
+        sizer & C;
+        impl::ArgSerializer<Args...> argSerializer;
+        argSerializer.exec(sizer, args...);
         if (mCurrSize < sizer.size) {
             mCurrentRequest.reset(new uint8_t[sizer.size]);
             mCurrSize = sizer.size;
         }
         crossbow::serializer ser(mCurrentRequest.get());
-        argSerializer.serialize(ser, args...);
+        ser & sizer.size;
+        ser & C;
+        argSerializer.exec(ser, args...);
         ser.buffer.release();
         boost::asio::async_write(mSocket, boost::asio::buffer(mCurrentRequest.get(), sizer.size),
                     [this, callback](const boost::system::error_code& ec, size_t){
@@ -236,20 +348,16 @@ private:
         using Res = typename Signature<C>::result;
         Args args;
         crossbow::deserializer des(mBuffer.get() + sizeof(size_t) + sizeof(Command));
-        constexpr auto firstIndex = std::tuple_size<Args>::value == 0 ? 0 : std::tuple_size<Args>::value - 1;
-        impl::DeserializeHelper<firstIndex, Args> desHelper;
-        desHelper.deserialize(des, args);
+        des & args;
         mImpl.template execute<C>(args, [this](const Res& result) {
             // Serialize result
-            constexpr auto firstIndex = std::tuple_size<Res>::value == 0 ? 0 : std::tuple_size<Res>::value - 1;
-            impl::TupleSerializer<firstIndex, Res> tSer;
             crossbow::sizer sizer;
-            tSer.size(sizer, result);
+            sizer & result;
             if (mBufSize < sizer.size) {
                 mBuffer.reset(new uint8_t[sizer.size]);
             }
             crossbow::serializer ser(mBuffer.get());
-            tSer.serialize(ser, result);
+            ser & result;
             ser.buffer.release();
             // send the result back
             boost::asio::async_write(mSocket,
@@ -265,17 +373,14 @@ private:
         });
     }
     void read(size_t bytes_read = 0) {
-        auto reqSize = *reinterpret_cast<size_t*>(mBuffer.get());
+        size_t reqSize = 0;
+        if (bytes_read != 0) {
+            reqSize = *reinterpret_cast<size_t*>(mBuffer.get());
+        }
         if (bytes_read != 0 && reqSize == bytes_read) {
             // done reading
             auto cmd = *reinterpret_cast<Command*>(mBuffer.get() + sizeof(size_t));
-            switch (cmd) {
-            case Command::POPULATE_WAREHOUSE:
-                execute<Command::POPULATE_WAREHOUSE>();
-                break;
-            case Command::CREATE_SCHEMA:
-                execute<Command::CREATE_SCHEMA>();
-            }
+            SWITCH_CASE(Command, cmd, COMMANDS)
             return;
         } else if (bytes_read >= 8 && reqSize > mBufSize) {
             std::unique_ptr<uint8_t[]> newBuf(new uint8_t[reqSize]);

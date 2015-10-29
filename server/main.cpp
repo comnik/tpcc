@@ -34,16 +34,17 @@ using namespace boost::asio;
 
 void accept(boost::asio::io_service &service,
         boost::asio::ip::tcp::acceptor &a,
-        tell::db::ClientManager<void>& clientManager) {
-    auto conn = new tpcc::Connection(service, clientManager);
-    a.async_accept(conn->socket(), [conn, &service, &a, &clientManager](const boost::system::error_code &err) {
+        tell::db::ClientManager<void>& clientManager,
+        int16_t numWarehouses) {
+    auto conn = new tpcc::Connection(service, clientManager, numWarehouses);
+    a.async_accept(conn->socket(), [conn, &service, &a, &clientManager, numWarehouses](const boost::system::error_code &err) {
         if (err) {
             delete conn;
             LOG_ERROR(err.message());
             return;
         }
         conn->run();
-        accept(service, a, clientManager);
+        accept(service, a, clientManager, numWarehouses);
     });
 }
 
@@ -54,13 +55,15 @@ int main(int argc, const char** argv) {
     std::string logLevel("DEBUG");
     crossbow::string commitManager;
     crossbow::string storageNodes;
+    int16_t numWarehouses = 0;
     auto opts = create_options("tpcc_server",
             value<'h'>("help", &help, tag::description{"print help"}),
             value<'H'>("host", &host, tag::description{"Host to bind to"}),
             value<'p'>("port", &port, tag::description{"Port to bind to"}),
             value<'l'>("log-level", &logLevel, tag::description{"The log level"}),
             value<'c'>("commit-manager", &commitManager, tag::description{"Address to the commit manager"}),
-            value<'s'>("storage-nodes", &storageNodes, tag::description{"Semicolon-separated list of storage node addresses"})
+            value<'s'>("storage-nodes", &storageNodes, tag::description{"Semicolon-separated list of storage node addresses"}),
+            value<'W'>("num-warehouses", &numWarehouses, tag::description{"Number of warehouses"})
             );
     try {
         parse(opts, argc, argv);
@@ -80,7 +83,9 @@ int main(int argc, const char** argv) {
     tell::db::ClientManager<void> clientManager(config);
     try {
         io_service service;
+        boost::asio::io_service::work work(service);
         ip::tcp::acceptor a(service);
+        boost::asio::ip::tcp::acceptor::reuse_address option(true);
         ip::tcp::resolver resolver(service);
         ip::tcp::resolver::iterator iter;
         if (host == "") {
@@ -94,6 +99,7 @@ int main(int argc, const char** argv) {
             auto endpoint = iter->endpoint();
             auto protocol = iter->endpoint().protocol();
             a.open(protocol);
+            a.set_option(option);
             a.bind(endpoint, err);
             if (err) {
                 a.close();
@@ -108,7 +114,7 @@ int main(int argc, const char** argv) {
         }
         a.listen();
         // we do not need to delete this object, it will delete itself
-        accept(service, a, clientManager);
+        accept(service, a, clientManager, numWarehouses);
         service.run();
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;

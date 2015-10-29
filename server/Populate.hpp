@@ -24,6 +24,7 @@
 #include <random>
 #include <cstdint>
 #include <crossbow/string.hpp>
+#include <common/Util.hpp>
 
 namespace tell {
 namespace db {
@@ -36,9 +37,10 @@ class Transaction;
 namespace tpcc {
 
 class Populator {
-    std::mt19937 mRandomDevice;
+    Random_t& mRandom;
     crossbow::string mOriginal = "ORIGINAL";
 public:
+    Populator() : mRandom(*Random()) {}
     void populateItems(tell::db::Transaction& transaction);
     void populateWarehouse(tell::db::Transaction& transaction, int16_t w_id);
 private:
@@ -50,17 +52,6 @@ private:
     void populateOrderLines(tell::db::Transaction& transaction,
             int32_t o_id, int16_t d_id, int16_t w_id, int16_t ol_cnt, int64_t o_entry_d);
     void populateNewOrders(tell::db::Transaction& transaction, int16_t w_id, int16_t d_id);
-private:
-    int64_t now();
-    crossbow::string astring(int x, int y);
-    crossbow::string nstring(unsigned x, unsigned y);
-    crossbow::string cLastName(int rNum);
-    crossbow::string zipCode();
-    template<class I>
-    I randomWithin(I lower, I upper) {
-        std::uniform_int_distribution<I> dist(lower, upper);
-        return dist(mRandomDevice);
-    }
 };
 
 } // namespace tpcc

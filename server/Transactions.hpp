@@ -21,25 +21,30 @@
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
 #pragma once
-#include <vector>
-#include <boost/asio.hpp>
-
+#include <telldb/Transaction.hpp>
 #include <common/Protocol.hpp>
-
-#include <telldb/TellDB.hpp>
+#include <common/Util.hpp>
+#include "CreateSchema.hpp"
 
 namespace tpcc {
 
-class CommandImpl;
-
-class Connection {
-    boost::asio::ip::tcp::socket mSocket;
-    std::unique_ptr<CommandImpl> mImpl;
+class Transactions {
+    int16_t mNumWarehouses;
+    Random_t& rnd;
 public:
-    Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager, int16_t numWarehouses);
-    ~Connection();
-    decltype(mSocket)& socket() { return mSocket; }
-    void run();
+    Transactions(int16_t numWarehouses) : mNumWarehouses(numWarehouses), rnd(*Random()) {}
+public:
+    NewOrderResult newOrderTransaction(tell::db::Transaction& tx, const NewOrderIn& in);
+    PaymentResult payment(tell::db::Transaction& tx, const PaymentIn& in);
+    OrderStatusResult orderStatus(tell::db::Transaction& tx, const OrderStatusIn& in);
+private:
+    tell::db::Future<tell::db::Tuple> getCustomer(tell::db::Transaction& tx,
+            bool selectByLastName,
+            const crossbow::string& c_last,
+            int16_t c_w_id,
+            int16_t c_d_id,
+            tell::db::table_t customerTable,
+            CustomerKey& customerKey);
 };
 
 } // namespace tpcc

@@ -23,6 +23,7 @@
 #include "Connection.hpp"
 #include "CreateSchema.hpp"
 #include "Populate.hpp"
+#include "Transactions.hpp"
 
 #include <telldb/Transaction.hpp>
 
@@ -35,13 +36,16 @@ class CommandImpl {
     boost::asio::io_service& mService;
     tell::db::ClientManager<void>& mClientManager;
     std::unique_ptr<tell::db::TransactionFiber<void>> mFiber;
+    Transactions mTransactions;
 public:
     CommandImpl(boost::asio::ip::tcp::socket& socket,
             boost::asio::io_service& service,
-            tell::db::ClientManager<void>& clientManager)
+            tell::db::ClientManager<void>& clientManager,
+            int16_t numWarehouses)
         : mServer(*this, socket)
         , mService(service)
         , mClientManager(clientManager)
+        , mTransactions(numWarehouses)
     {}
     void run() {
         mServer.run();
@@ -93,11 +97,50 @@ public:
         };
         mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
     }
+
+    template<Command C, class Callback>
+    typename std::enable_if<C == Command::NEW_ORDER, void>::type
+    execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        auto transaction = [this, args, callback](tell::db::Transaction& tx) {
+            typename Signature<C>::result res = mTransactions.newOrderTransaction(tx, args);
+            mService.post([this, res, callback]() {
+                mFiber.reset(nullptr);
+                callback(res);
+            });
+        };
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+    }
+
+    template<Command C, class Callback>
+    typename std::enable_if<C == Command::PAYMENT, void>::type
+    execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        auto transaction = [this, args, callback](tell::db::Transaction& tx) {
+            typename Signature<C>::result res = mTransactions.payment(tx, args);
+            mService.post([this, res, callback]() {
+                mFiber.reset(nullptr);
+                callback(res);
+            });
+        };
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+    }
+
+    template<Command C, class Callback>
+    typename std::enable_if<C == Command::ORDER_STATUS, void>::type
+    execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        auto transaction = [this, args, callback](tell::db::Transaction& tx) {
+            typename Signature<C>::result res = mTransactions.orderStatus(tx, args);
+            mService.post([this, res, callback]() {
+                mFiber.reset(nullptr);
+                callback(res);
+            });
+        };
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+    }
 };
 
-Connection::Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager)
+Connection::Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager, int16_t numWarehouses)
     : mSocket(service)
-    , mImpl(new CommandImpl(mSocket, service, clientManager))
+    , mImpl(new CommandImpl(mSocket, service, clientManager, numWarehouses))
 {}
 
 Connection::~Connection() = default;

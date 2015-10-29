@@ -83,7 +83,7 @@ void createCustomer(db::Transaction& transaction) {
     schema.addField(store::FieldType::TEXT, "c_zip", true);
     schema.addField(store::FieldType::TEXT, "c_phone", true);
     schema.addField(store::FieldType::BIGINT, "c_since", true);
-    schema.addField(store::FieldType::SMALLINT, "c_credit", true);
+    schema.addField(store::FieldType::TEXT, "c_credit", true);
     schema.addField(store::FieldType::BIGINT, "c_credit_lim", true);
     schema.addField(store::FieldType::INT, "c_discount", true);
     schema.addField(store::FieldType::BIGINT, "c_balance", true);
@@ -91,6 +91,13 @@ void createCustomer(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "c_payment_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "c_delivery_cnt", true);
     schema.addField(store::FieldType::TEXT, "c_data", true);
+    schema.addIndex("c_last_idx",
+            std::make_pair(false, std::vector<tell::store::Schema::id_t>{
+                schema.idOf("c_last")
+                , schema.idOf("c_w_id")
+                , schema.idOf("c_d_id")
+                , schema.idOf("c_first")
+                }));
     transaction.createTable("customer", schema);
 }
 
@@ -130,6 +137,12 @@ void createOrder(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "o_carrier_id", false);
     schema.addField(store::FieldType::SMALLINT, "o_ol_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "o_all_local", true);
+    schema.addIndex("order_idx", std::make_pair(true, std::vector<id_t>{
+                schema.idOf("o_w_id")
+                , schema.idOf("o_d_id")
+                , schema.idOf("o_c_id")
+                , schema.idOf("o_id")
+                }));
     transaction.createTable("order", schema);
 }
 

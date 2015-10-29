@@ -50,25 +50,18 @@ OrderStatusResult Transactions::orderStatus(Transaction& tx, const OrderStatusIn
         auto orderF = tx.get(oTable, iter.value());
         auto order = orderF.get();
         auto customer = customerF.get();
+        auto ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt").value());
         // To get the order lines, we could use an index - but this is not necessary,
         // since we can generate all primary keys instead
         OrderlineKey olKey{in.w_id, in.d_id, oKey.o_id, int16_t(1)};
-        try {
-            std::vector<Future<Tuple>> reqs;
-            while (true) {
-                // to speed things up a bit, we always send 10 requests per iteration
-                reqs.reserve(10);
-                for (int i = 1; i <= 10; ++i) {
-                    reqs.emplace_back(tx.get(olTable, olKey.key()));
-                    olKey.ol_number += i;
-                }
-                for (auto& f : reqs) {
-                    f.get();
-                }
-                reqs.clear();
-            }
-        } catch (tell::db::TupleDoesNotExist&) {
-            // we got all order-lines
+        std::vector<Future<Tuple>> reqs;
+        reqs.reserve(ol_cnt);
+        for (decltype(ol_cnt) i = 1; i <= ol_cnt; ++i) {
+            olKey.ol_number = i;
+            reqs.emplace_back(tx.get(olTable, olKey.key()));
+        }
+        for (auto& f : reqs) {
+            f.get();
         }
         tx.commit();
         result.success = true;

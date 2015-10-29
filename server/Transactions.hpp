@@ -37,6 +37,8 @@ public:
     NewOrderResult newOrderTransaction(tell::db::Transaction& tx, const NewOrderIn& in);
     PaymentResult payment(tell::db::Transaction& tx, const PaymentIn& in);
     OrderStatusResult orderStatus(tell::db::Transaction& tx, const OrderStatusIn& in);
+    DeliveryResult delivery(tell::db::Transaction& tx, const DeliveryIn& in);
+    StockLevelResult stockLevel(tell::db::Transaction& tx, const StockLevelIn& in);
 private:
     tell::db::Future<tell::db::Tuple> getCustomer(tell::db::Transaction& tx,
             bool selectByLastName,

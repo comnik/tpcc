@@ -30,7 +30,9 @@ set(SERVER_SRC
     server/CreateSchema.cpp
     server/NewOrder.cpp
     server/Payment.cpp
-    server/OrderStatus.cpp)
+    server/OrderStatus.cpp
+    server/Delivery.cpp
+    server/StockLevel.cpp)
 
 set(CLIENT_SRC
     client/main.cpp

@@ -136,6 +136,32 @@ public:
         };
         mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
     }
+
+    template<Command C, class Callback>
+    typename std::enable_if<C == Command::DELIVERY, void>::type
+    execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        auto transaction = [this, args, callback](tell::db::Transaction& tx) {
+            typename Signature<C>::result res = mTransactions.delivery(tx, args);
+            mService.post([this, res, callback]() {
+                mFiber.reset(nullptr);
+                callback(res);
+            });
+        };
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+    }
+
+    template<Command C, class Callback>
+    typename std::enable_if<C == Command::STOCK_LEVEL, void>::type
+    execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        auto transaction = [this, args, callback](tell::db::Transaction& tx) {
+            typename Signature<C>::result res = mTransactions.stockLevel(tx, args);
+            mService.post([this, res, callback]() {
+                mFiber.reset(nullptr);
+                callback(res);
+            });
+        };
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+    }
 };
 
 Connection::Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager, int16_t numWarehouses)

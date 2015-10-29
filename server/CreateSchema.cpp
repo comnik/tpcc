@@ -122,6 +122,12 @@ void createNewOrder(db::Transaction& transaction) {
     schema.addField(store::FieldType::INT, "no_o_id", true);
     schema.addField(store::FieldType::SMALLINT, "no_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "no_w_id", true);
+    schema.addIndex("new-order-idx",
+            std::make_pair(true, std::vector<tell::store::Schema::id_t>{
+                schema.idOf("no_w_id")
+                , schema.idOf("no_d_id")
+                , schema.idOf("no_o_id")
+                }));
     transaction.createTable("new-order", schema);
 }
 

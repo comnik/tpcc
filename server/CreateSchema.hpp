@@ -96,7 +96,7 @@ struct NewOrderKey {
     int16_t d_id;
     int32_t o_id;
 
-    NewOrderKey(int16_t w_id, int16_t d_id, int16_t o_id)
+    NewOrderKey(int16_t w_id, int16_t d_id, int32_t o_id)
         : w_id(w_id)
         , d_id(d_id)
         , o_id(o_id)

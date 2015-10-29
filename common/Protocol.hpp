@@ -58,7 +58,7 @@
 
 namespace tpcc {
 
-#define COMMANDS (POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS)
+#define COMMANDS (POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS, DELIVERY, STOCK_LEVEL)
 
 GEN_COMMANDS(Command, COMMANDS);
 
@@ -226,6 +226,57 @@ template<>
 struct Signature<Command::ORDER_STATUS> {
     using arguments = OrderStatusIn;
     using result = OrderStatusResult;
+};
+
+struct DeliveryIn {
+    using is_serializable = crossbow::is_serializable;
+    int16_t w_id;
+    int16_t o_carrier_id;
+
+    template<class A>
+    void operator&(A& ar) {
+        ar & w_id;
+        ar & o_carrier_id;
+    }
+};
+
+struct DeliveryResult {
+    using is_serializable = crossbow::is_serializable;
+    bool success;
+    crossbow::string error;
+
+    template<class A>
+    void operator& (A& ar) {
+        ar & success;
+        ar & error;
+    }
+};
+
+template<>
+struct Signature<Command::DELIVERY> {
+    using arguments = DeliveryIn;
+    using result = DeliveryResult;
+};
+
+struct StockLevelIn {
+};
+
+struct StockLevelResult {
+    using is_serializable = crossbow::is_serializable;
+    bool success;
+    crossbow::string error;
+
+    template<class A>
+    void operator& (A& ar) {
+        ar & success;
+        ar & error;
+    }
+};
+
+template<>
+struct Signature<Command::STOCK_LEVEL> {
+    using arguments = StockLevelIn;
+    using result = StockLevelResult;
 };
 
 namespace impl {

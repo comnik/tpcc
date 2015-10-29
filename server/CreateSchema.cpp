@@ -137,7 +137,8 @@ void createOrder(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "o_carrier_id", false);
     schema.addField(store::FieldType::SMALLINT, "o_ol_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "o_all_local", true);
-    schema.addIndex("order_idx", std::make_pair(true, std::vector<id_t>{
+    schema.addIndex("order_idx",
+            std::make_pair(true, std::vector<tell::store::Schema::id_t>{
                 schema.idOf("o_w_id")
                 , schema.idOf("o_d_id")
                 , schema.idOf("o_c_id")

@@ -74,7 +74,7 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
         auto cTable = cTableF.get();
         CustomerKey customerKey(0, 0, 0);
         auto customerF = getCustomer(tx, in.selectByLastName, in.c_last,
-               in.c_w_id, in.c_d_id, cTable);
+               in.c_w_id, in.c_d_id, cTable, customerKey);
         DistrictKey dKey{in.w_id, in.d_id};
         auto districtF = tx.get(dTable, dKey.key());
         tell::db::key_t warehouseKey{uint64_t(in.w_id)};

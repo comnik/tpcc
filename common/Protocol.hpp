@@ -421,11 +421,13 @@ private:
         mImpl.template execute<C>(args, [this](const Res& result) {
             // Serialize result
             crossbow::sizer sizer;
+            sizer & sizer.size;
             sizer & result;
             if (mBufSize < sizer.size) {
                 mBuffer.reset(new uint8_t[sizer.size]);
             }
             crossbow::serializer ser(mBuffer.get());
+            ser & sizer.size;
             ser & result;
             ser.buffer.release();
             // send the result back

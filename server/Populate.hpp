@@ -30,6 +30,7 @@ namespace tell {
 namespace db {
 
 class Transaction;
+class Counter;
 
 } // namespace db
 } // namespace tell
@@ -42,12 +43,12 @@ class Populator {
 public:
     Populator() : mRandom(*Random()) {}
     void populateItems(tell::db::Transaction& transaction);
-    void populateWarehouse(tell::db::Transaction& transaction, int16_t w_id);
+    void populateWarehouse(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id);
 private:
     void populateStocks(tell::db::Transaction& transaction, int16_t w_id);
-    void populateDistricts(tell::db::Transaction& transaction, int16_t w_id);
-    void populateCustomers(tell::db::Transaction& transaction, int16_t w_id, int16_t d_id, int64_t c_since);
-    void populateHistory(tell::db::Transaction& transaction, int16_t c_id, int16_t d_id, int16_t w_id, int64_t n);
+    void populateDistricts(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id);
+    void populateCustomers(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id, int16_t d_id, int64_t c_since);
+    void populateHistory(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t c_id, int16_t d_id, int16_t w_id, int64_t n);
     void populateOrders(tell::db::Transaction& transaction, int16_t d_id, int16_t w_id, int64_t o_entry_d);
     void populateOrderLines(tell::db::Transaction& transaction,
             int32_t o_id, int16_t d_id, int16_t w_id, int16_t ol_cnt, int64_t o_entry_d);

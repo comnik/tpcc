@@ -82,8 +82,9 @@ public:
             bool success;
             crossbow::string msg;
             try {
+                auto counter = tx.getCounter("history_counter");
                 Populator populator;
-                populator.populateWarehouse(tx, args);
+                populator.populateWarehouse(tx, counter, args);
                 tx.commit();
                 success = true;
             } catch (std::exception& ex) {

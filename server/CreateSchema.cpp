@@ -103,6 +103,7 @@ void createCustomer(db::Transaction& transaction) {
 
 void createHistory(db::Transaction& transaction) {
     // this one has no primary key
+    transaction.createCounter("history_counter");
     store::Schema schema(store::TableType::TRANSACTIONAL);
     schema.addField(store::FieldType::INT, "h_c_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_c_d_id", true);
@@ -218,7 +219,6 @@ void createSchema(tell::db::Transaction& transaction) {
     createOrderLine(transaction);
     createItem(transaction);
     createStock(transaction);
-    transaction.commit();
 }
 
 } // namespace tpcc

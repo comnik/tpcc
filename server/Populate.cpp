@@ -25,6 +25,8 @@
 #include <chrono>
 #include <algorithm>
 
+using namespace tell::db;
+
 namespace tpcc {
 
 void Populator::populateItems(tell::db::Transaction& transaction) {
@@ -41,7 +43,7 @@ void Populator::populateItems(tell::db::Transaction& transaction) {
     }
 }
 
-void Populator::populateWarehouse(tell::db::Transaction& transaction, int16_t w_id) {
+void Populator::populateWarehouse(tell::db::Transaction& transaction, Counter& counter, int16_t w_id) {
     auto tIdFuture = transaction.openTable("warehouse");
     auto table = tIdFuture.get();
     tell::db::key_t key{uint64_t(w_id)};
@@ -57,7 +59,7 @@ void Populator::populateWarehouse(tell::db::Transaction& transaction, int16_t w_
                 int64_t(30000000)
                 ));
     populateStocks(transaction, w_id);
-    populateDistricts(transaction, w_id);
+    populateDistricts(transaction, counter, w_id);
 }
 
 void Populator::populateStocks(tell::db::Transaction& transaction, int16_t w_id) {
@@ -98,7 +100,7 @@ void Populator::populateStocks(tell::db::Transaction& transaction, int16_t w_id)
     }
 }
 
-void Populator::populateDistricts(tell::db::Transaction& transaction, int16_t w_id) {
+void Populator::populateDistricts(tell::db::Transaction& transaction, Counter& counter, int16_t w_id) {
     auto tIdFuture = transaction.openTable("district");
     auto table = tIdFuture.get();
     uint64_t keyBase = w_id;
@@ -119,18 +121,17 @@ void Populator::populateDistricts(tell::db::Transaction& transaction, int16_t w_
                     int64_t(3000000), // d_ytd
                     int(3001) // d_next_o_id
                     ));
-        populateCustomers(transaction, w_id, i, n);
+        populateCustomers(transaction, counter, w_id, i, n);
         populateOrders(transaction, i, w_id, n);
         populateNewOrders(transaction, w_id, i);
     }
 }
 
-void Populator::populateCustomers(tell::db::Transaction& transaction, int16_t w_id, int16_t d_id, int64_t c_since) {
+void Populator::populateCustomers(tell::db::Transaction& transaction, Counter& counter, int16_t w_id, int16_t d_id, int64_t c_since) {
     auto tIdFuture = transaction.openTable("customer");
     auto table = tIdFuture.get();
     uint64_t keyBase = uint64_t(w_id) << (3*8);
-    keyBase |= d_id;
-    keyBase = keyBase << 8;
+    keyBase |= (uint64_t(d_id) << 2*8);
     for (int16_t c_id = 1; c_id <= 3000; ++c_id) {
         crossbow::string c_credit("GC");
         if (mRandom.randomWithin(0, 9) == 0) {
@@ -164,15 +165,15 @@ void Populator::populateCustomers(tell::db::Transaction& transaction, int16_t w_
                     , int16_t(0) // c_delivery_cnt
                     , mRandom.astring(300, 500) // c_data
                     ));
-        populateHistory(transaction, c_id, d_id, w_id, c_since);
+        populateHistory(transaction, counter, c_id, d_id, w_id, c_since);
     }
 }
 
-void Populator::populateHistory(tell::db::Transaction& transaction, int16_t c_id, int16_t d_id, int16_t w_id, int64_t n) {
-    tell::db::key_t key{(uint64_t(c_id) << 3*16) | (uint64_t(d_id) << 2*16) | (uint64_t(w_id) << 16) | uint64_t(0)};
+void Populator::populateHistory(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t c_id, int16_t d_id, int16_t w_id, int64_t n) {
+    uint64_t key = counter.next();
     auto tIdFuture = transaction.openTable("history");
     auto table = tIdFuture.get();
-    transaction.insert(table, key, std::make_tuple(
+    transaction.insert(table, tell::db::key_t{key}, std::make_tuple(
                 c_id, // h_c_id
                 d_id, // h_c_d_id
                 w_id, // h_c_w_id
@@ -228,7 +229,7 @@ void Populator::populateOrderLines(tell::db::Transaction& transaction,
     auto tIdFuture = transaction.openTable("order-line");
     auto table = tIdFuture.get();
     uint64_t baseKey = (uint64_t(w_id) << 6*8) | (uint64_t(d_id) << 5*8) | (uint64_t(o_id) << 8);
-    for (int16_t ol_number = 1; ol_number <= ol_cnt; ++ol_cnt) {
+    for (int16_t ol_number = 1; ol_number <= ol_cnt; ++ol_number) {
         tell::db::key_t key{baseKey | uint64_t(ol_number)};
         transaction.insert(table, key, std::make_tuple(
                     o_id

@@ -160,7 +160,8 @@ public:
                 callback(res);
             });
         };
-        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction,
+                        tell::store::TransactionType::ANALYTICAL)));
     }
 };
 

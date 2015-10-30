@@ -29,6 +29,58 @@ namespace tpcc {
 StockLevelResult Transactions::stockLevel(Transaction& tx, const StockLevelIn& in) {
     StockLevelResult result;
     try {
+        auto dTableF = tx.openTable("district");
+        auto oTableF = tx.openTable("order");
+        auto olTableF = tx.openTable("order-line");
+        auto sTableF = tx.openTable("stock");
+        auto sTable = sTableF.get();
+        auto olTable = olTableF.get();
+        auto oTable = oTableF.get();
+        auto dTable = dTableF.get();
+
+        // get District
+        DistrictKey dKey{in.w_id, in.d_id};
+        auto districtF = tx.get(dTable, dKey.key());
+        auto district = districtF.get();
+        auto d_next_o_id = boost::any_cast<int32_t>(district.at("d_next_o_id").value());
+        OrderKey oKey{in.w_id, in.d_id, 0};
+        // get the 20 newest orders - this is not required in the benchmark,
+        // but it allows us to not use an index
+        std::vector<std::pair<int32_t, Future<Tuple>>> ordersF;
+        ordersF.reserve(20);
+        for (decltype(d_next_o_id) ol_o_id = d_next_o_id - 20; ol_o_id < d_next_o_id; ++ol_o_id) {
+            oKey.o_id = ol_o_id;
+            ordersF.emplace_back(ol_o_id, tx.get(oTable, oKey.key()));
+        }
+        // get the order-lines
+        std::vector<Future<Tuple>> orderlinesF;
+        OrderlineKey olKey{in.w_id, in.d_id, 0, 0};
+        for (auto orderF : ordersF) {
+            olKey.o_id = orderF.first;
+            auto order = orderF.second.get();
+            auto o_ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt"));
+            for (decltype(o_ol_cnt) ol_number = 1; ol_number < o_ol_cnt; ++ol_number) {
+                olKey.ol_number = ol_number;
+                orderlinesF.emplace_back(tx.get(olTable, olKey.key()));
+            }
+        }
+        result.low_stock = 0;
+        // count low_stock
+        std::unordered_map<int32_t, Future<Tuple>> stocksF;
+        for (auto& olF : orderlinesF) {
+            auto ol = olF.get();
+            auto ol_i_id = boost::any_cast<int32_t>(ol.at("ol_i_id"));
+            if (stocksF.count(ol_i_id) == 0) {
+                stocksF.emplace(ol_i_id, tx.get(sTable, tell::db::key_t{(uint64_t(in.w_id) << 4*8) | uint64_t(ol_i_id)}));
+            }
+        }
+        for (auto& p : stocksF) {
+            auto stock = p.second.get();
+            result.low_stock += boost::any_cast<int32_t>(stock.at("s_quantity").value());
+        }
+        tx.commit();
+        result.success = true;
+        return result;
     } catch (std::exception& ex) {
         result.success = false;
         result.error = ex.what();

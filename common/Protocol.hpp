@@ -229,26 +229,21 @@ struct Signature<Command::ORDER_STATUS> {
 };
 
 struct DeliveryIn {
-    using is_serializable = crossbow::is_serializable;
     int16_t w_id;
     int16_t o_carrier_id;
-
-    template<class A>
-    void operator&(A& ar) {
-        ar & w_id;
-        ar & o_carrier_id;
-    }
 };
 
 struct DeliveryResult {
     using is_serializable = crossbow::is_serializable;
     bool success;
     crossbow::string error;
+    int32_t low_stock;
 
     template<class A>
     void operator& (A& ar) {
         ar & success;
         ar & error;
+        ar & low_stock;
     }
 };
 
@@ -259,17 +254,22 @@ struct Signature<Command::DELIVERY> {
 };
 
 struct StockLevelIn {
+    int16_t w_id;
+    int16_t d_id;
+    int32_t threshold;
 };
 
 struct StockLevelResult {
     using is_serializable = crossbow::is_serializable;
     bool success;
     crossbow::string error;
+    int32_t low_stock;
 
     template<class A>
     void operator& (A& ar) {
         ar & success;
         ar & error;
+        ar & low_stock;
     }
 };
 

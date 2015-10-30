@@ -28,6 +28,7 @@
 #include <string>
 #include <iostream>
 #include <cassert>
+#include <fstream>
 
 #include "Client.hpp"
 
@@ -53,6 +54,7 @@ int main(int argc, const char** argv) {
     std::string host;
     std::string port("8713");
     std::string logLevel("DEBUG");
+    std::string outFile("out.csv");
     size_t numClients = 1;
     unsigned time = 5*60;
     auto opts = create_options("tpcc_server",
@@ -63,6 +65,7 @@ int main(int argc, const char** argv) {
             , value<'P'>("populate", &populate, tag::description{"Populate the database"})
             , value<'W'>("num-warehouses", &numWarehouses, tag::description{"Number of warehouses"})
             , value<'t'>("time", &time, tag::description{"Duration of the benchmark in seconds"})
+            , value<'o'>("out", &outFile, tag::description{"Path to the output file"})
             );
     try {
         parse(opts, argc, argv);
@@ -134,6 +137,44 @@ int main(int argc, const char** argv) {
             }
         }
         service.run();
+        LOG_INFO("Done, writing results");
+        std::ofstream out(outFile.c_str());
+        out << "start,end,transaction,success,error\n";
+        for (const auto& client : clients) {
+            const auto& queue = client.log();
+            for (const auto& e : queue) {
+                crossbow::string tName;
+                switch (e.transaction) {
+                case tpcc::Command::POPULATE_WAREHOUSE:
+                    tName = "Populate";
+                    break;
+                case tpcc::Command::CREATE_SCHEMA:
+                    tName = "Schema Create";
+                    break;
+                case tpcc::Command::STOCK_LEVEL:
+                    tName = "Stock Level";
+                    break;
+                case tpcc::Command::DELIVERY:
+                    tName = "Delivery";
+                    break;
+                case tpcc::Command::NEW_ORDER:
+                    tName = "New Order";
+                    break;
+                case tpcc::Command::ORDER_STATUS:
+                    tName = "Order Status";
+                    break;
+                case tpcc::Command::PAYMENT:
+                    tName = "Payment";
+                    break;
+                }
+                out << std::chrono::duration_cast<std::chrono::seconds>(e.start - startTime).count()
+                    << std::chrono::duration_cast<std::chrono::seconds>(e.end - startTime).count()
+                    << tName
+                    << (e.success ? "true" : "false")
+                    << e.error
+                    << std::endl;
+            }
+        }
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
     }

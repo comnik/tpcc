@@ -47,6 +47,7 @@ public:
         , mClientManager(clientManager)
         , mTransactions(numWarehouses)
     {}
+
     void run() {
         mServer.run();
     }
@@ -76,13 +77,13 @@ public:
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::POPULATE_WAREHOUSE, void>::type
-    execute(const std::tuple<int16_t>& args, const Callback& callback) {
+    execute(int16_t args, const Callback& callback) {
         auto transaction = [this, args, callback](tell::db::Transaction& tx) {
             bool success;
             crossbow::string msg;
             try {
                 Populator populator;
-                populator.populateWarehouse(tx, std::get<0>(args));
+                populator.populateWarehouse(tx, args);
                 tx.commit();
                 success = true;
             } catch (std::exception& ex) {

@@ -27,12 +27,24 @@
 #include <boost/system/error_code.hpp>
 #include <string>
 #include <iostream>
+#include <cassert>
 
 #include "Client.hpp"
 
 using namespace crossbow::program_options;
 using namespace boost::asio;
 using err_code = boost::system::error_code;
+
+std::vector<std::string> split(const std::string str, const char delim) {
+    std::stringstream ss(str);
+    std::string item;
+    std::vector<std::string> result;
+    while (std::getline(ss, item, delim)) {
+        if (item.empty()) continue;
+        result.push_back(std::move(item));
+    }
+    return result;
+}
 
 int main(int argc, const char** argv) {
     bool help = false;
@@ -42,14 +54,15 @@ int main(int argc, const char** argv) {
     std::string port("8713");
     std::string logLevel("DEBUG");
     size_t numClients = 1;
+    unsigned time = 5*60;
     auto opts = create_options("tpcc_server",
             value<'h'>("help", &help, tag::description{"print help"})
-            , value<'H'>("host", &host, tag::description{"Host to bind to"})
-            , value<'p'>("port", &port, tag::description{"Port to bind to"})
+            , value<'H'>("host", &host, tag::description{"Comma-separated list of hosts"})
             , value<'l'>("log-level", &logLevel, tag::description{"The log level"})
-            , value<'c'>("num-clients", &numClients, tag::description{"Number of Clients to run"})
+            , value<'c'>("num-clients", &numClients, tag::description{"Number of Clients to run per host"})
             , value<'P'>("populate", &populate, tag::description{"Populate the database"})
             , value<'W'>("num-warehouses", &numWarehouses, tag::description{"Number of warehouses"})
+            , value<'t'>("time", &time, tag::description{"Duration of the benchmark in seconds"})
             );
     try {
         parse(opts, argc, argv);
@@ -66,25 +79,35 @@ int main(int argc, const char** argv) {
         std::cerr << "No host\n";
         return 1;
     }
-    std::vector<tpcc::Client> clients;
-    clients.reserve(numClients);
+    auto startTime = tpcc::Clock::now();
+    auto endTime = startTime + std::chrono::seconds(time);
     crossbow::logger::logger->config.level = crossbow::logger::logLevelFromString(logLevel);
     try {
+        auto hosts = split(host, ',');
         io_service service;
-        ip::tcp::resolver resolver(service);
-        ip::tcp::resolver::iterator iter;
-        if (host == "") {
-            iter = resolver.resolve(ip::tcp::resolver::query(port));
-        } else {
-            iter = resolver.resolve(ip::tcp::resolver::query(host, port));
+        auto sumClients = hosts.size() * numClients;
+        std::vector<tpcc::Client> clients;
+        clients.reserve(sumClients);
+        auto wareHousesPerClient = numWarehouses / sumClients;
+        for (decltype(sumClients) i = 0; i < sumClients; ++i) {
+            if (i >= numWarehouses) break;
+            clients.emplace_back(service, numWarehouses, int16_t(wareHousesPerClient * i + 1), int16_t(wareHousesPerClient * (i + 1)), endTime);
         }
-        auto wareHousesPerClient = numWarehouses / numClients;
-        for (decltype(numClients) i = 0; i < numClients; ++i) {
-            clients.emplace_back(service);
-            boost::asio::connect(clients[i].socket(), iter);
-            LOG_INFO(("Connected to client" + crossbow::to_string(i)));
-            if (!populate) {
-                clients[i].run();
+        for (size_t i = 0; i < hosts.size(); ++i) {
+            auto h = hosts[i];
+            auto addr = split(h, ':');
+            assert(addr.size() <= 2);
+            auto p = addr.size() == 2 ? addr[1] : port;
+            ip::tcp::resolver resolver(service);
+            ip::tcp::resolver::iterator iter;
+            if (host == "") {
+                iter = resolver.resolve(ip::tcp::resolver::query(port));
+            } else {
+                iter = resolver.resolve(ip::tcp::resolver::query(host, port));
+            }
+            for (int j = 0; j < numClients; ++j) {
+                LOG_INFO("Connected to client " + crossbow::to_string(i*numClients + j));
+                boost::asio::connect(clients[i*numClients + j].socket(), iter);
             }
         }
         if (populate) {
@@ -100,14 +123,15 @@ int main(int argc, const char** argv) {
                     LOG_ERROR(std::get<1>(res));
                     return;
                 }
-                for (decltype(numClients) i = 0; i < numClients; ++i) {
-                    auto upper = int16_t(int16_t(wareHousesPerClient * (i + 1)));
-                    if (i + 1 == numClients) {
-                        upper = numWarehouses;
-                    }
-                    clients[i].populate(int16_t((wareHousesPerClient * i) + 1), upper);
+                for (auto& client : clients) {
+                    client.populate();
                 }
             });
+        } else {
+            for (decltype(clients.size()) i = 0; i < clients.size(); ++i) {
+                auto& client = clients[i];
+                client.run();
+            }
         }
         service.run();
     } catch (std::exception& e) {

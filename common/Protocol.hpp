@@ -75,13 +75,13 @@ struct Signature;
 template<>
 struct Signature<Command::POPULATE_WAREHOUSE> {
     using result = std::tuple<bool, crossbow::string>;
-    using arguments = std::tuple<int16_t>;
+    using arguments = int16_t;
 };
 
 template<>
 struct Signature<Command::CREATE_SCHEMA> {
     using result = std::tuple<bool, crossbow::string>;
-    using arguments = std::tuple<>;
+    using arguments = void;
 };
 
 struct NewOrderIn {
@@ -305,6 +305,21 @@ struct ArgSerializer<> {
 
 namespace client {
 
+template<class... Args>
+struct argsType;
+template<class A, class B, class... Tail>
+struct argsType<A, B, Tail...> {
+    using type = std::tuple<A, B, Tail...>;
+};
+template<class Arg>
+struct argsType<Arg> {
+    using type = Arg;
+};
+template<>
+struct argsType<> {
+    using type = void;
+};
+
 class CommandsImpl {
     boost::asio::ip::tcp::socket& mSocket;
     size_t mCurrSize = 1024;
@@ -342,7 +357,9 @@ public:
 
     template<Command C, class Callback, class... Args>
     void execute(const Callback& callback, const Args&... args) {
-        static_assert(std::is_same<typename Signature<C>::arguments, std::tuple<Args...>>::value,
+        static_assert(
+                (std::is_void<typename Signature<C>::arguments>::value && std::is_void<argsType<Args...>>::value) ||
+                std::is_same<typename Signature<C>::arguments, typename argsType<Args...>::type>::value,
                 "Wrong function arguments");
         using ResType = typename Signature<C>::result;
         crossbow::sizer sizer;
@@ -397,7 +414,8 @@ private:
     void execute() {
         using Args = typename Signature<C>::arguments;
         using Res = typename Signature<C>::result;
-        Args args;
+        using IArgs = typename std::conditional<std::is_void<Args>::value, std::tuple<>, Args>::type;
+        IArgs args;
         crossbow::deserializer des(mBuffer.get() + sizeof(size_t) + sizeof(Command));
         des & args;
         mImpl.template execute<C>(args, [this](const Res& result) {

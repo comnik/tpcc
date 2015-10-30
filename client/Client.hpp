@@ -23,17 +23,45 @@
 #pragma once
 #include <boost/asio.hpp>
 #include <common/Protocol.hpp>
+#include <random>
+#include <chrono>
+#include <deque>
+
+#include <common/Util.hpp>
 
 namespace tpcc {
+
+using Clock = std::chrono::system_clock;
+
+struct LogEntry {
+    bool success;
+    crossbow::string error;
+    Command transaction;
+    decltype(Clock::now()) start;
+    decltype(start) end;
+};
 
 class Client {
     using Socket = boost::asio::ip::tcp::socket;
     Socket mSocket;
     client::CommandsImpl mCmds;
+    int16_t mNumWarehouses;
+    int16_t mWareHouseLower;
+    int16_t mWareHouseUpper;
+    int16_t mCurrWarehouse;
+    int16_t mCurrDistrict;
+    Random_t rnd;
+    std::deque<LogEntry> mLog;
+    decltype(Clock::now()) mEndTime;
 public:
-    Client(boost::asio::io_service& service)
+    Client(boost::asio::io_service& service, int16_t numWarehouses, int16_t wareHouseLower, int16_t wareHouseUpper, decltype(Clock::now()) endTime)
         : mSocket(service)
         , mCmds(mSocket)
+        , mNumWarehouses(numWarehouses)
+        , mWareHouseLower(wareHouseLower)
+        , mWareHouseUpper(wareHouseUpper)
+        , mCurrWarehouse(mWareHouseLower)
+        , mEndTime(endTime)
     {}
     Socket& socket() {
         return mSocket;
@@ -45,7 +73,11 @@ public:
         return mCmds;
     }
     void run();
-    void populate(int16_t from, int16_t to);
+    void populate();
+private:
+    void populate(int16_t lower, int16_t upper);
+    template<Command C>
+    void execute(const typename Signature<C>::arguments& arg);
 };
 
 }

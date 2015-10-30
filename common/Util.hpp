@@ -54,7 +54,7 @@ public:
 private:
     friend struct crossbow::create_static<Random_t>;
     RandomDevice mRandomDevice;
-private: // Construction
+public: // Construction
     Random_t();
 public:
     crossbow::string astring(int x, int y);

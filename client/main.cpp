@@ -93,7 +93,7 @@ int main(int argc, const char** argv) {
         clients.reserve(sumClients);
         auto wareHousesPerClient = numWarehouses / sumClients;
         for (decltype(sumClients) i = 0; i < sumClients; ++i) {
-            if (i >= numWarehouses) break;
+            if (i >= unsigned(numWarehouses)) break;
             clients.emplace_back(service, numWarehouses, int16_t(wareHousesPerClient * i + 1), int16_t(wareHousesPerClient * (i + 1)), endTime);
         }
         for (size_t i = 0; i < hosts.size(); ++i) {
@@ -108,7 +108,7 @@ int main(int argc, const char** argv) {
             } else {
                 iter = resolver.resolve(ip::tcp::resolver::query(host, port));
             }
-            for (int j = 0; j < numClients; ++j) {
+            for (unsigned j = 0; j < numClients; ++j) {
                 LOG_INFO("Connected to client " + crossbow::to_string(i*numClients + j));
                 boost::asio::connect(clients[i*numClients + j].socket(), iter);
             }

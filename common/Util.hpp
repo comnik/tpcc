@@ -29,7 +29,7 @@
 namespace std {
 
 template<>
-struct std::hash<std::pair<int16_t, int16_t>> {
+struct hash<std::pair<int16_t, int16_t>> {
     size_t operator() (std::pair<int16_t, int16_t> p) const {
         return size_t(size_t(p.first) << 16 | p.first);
     }

@@ -92,10 +92,24 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         // insert order
         auto o_id = boost::any_cast<int32_t>(d_next_o_id.value());
         OrderKey oKey(w_id, d_id, o_id);
-        auto order = std::make_tuple(o_id, d_id, w_id, c_id, datetime, nullptr, o_ol_cnt, o_all_local);
-        tx.insert(oTable, oKey.key(), order);
+        tx.insert(oTable, oKey.key(),
+                {{
+                {"o_id", o_id},
+                {"o_d_id", d_id},
+                {"o_w_id", w_id},
+                {"o_c_id", c_id},
+                {"o_entry_d", datetime},
+                {"o_carrier_id", nullptr},
+                {"o_ol_cnt", o_ol_cnt},
+                {"o_all_local", o_all_local}
+                }});
         // insert new-order
-        tx.insert(noTable, oKey.key(), std::make_tuple(o_id, d_id, w_id));
+        tx.insert(noTable, oKey.key(),
+                {{
+                {"no_o_id", o_id},
+                {"no_d_id", d_id},
+                {"no_w_id", w_id}
+                }});
         // generate random items
         std::vector<int16_t> ol_i_id;
         for (int16_t i = 0; i < o_ol_cnt; ++i) {
@@ -167,8 +181,18 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             ol_amount_sum += ol_amount;
             OrderlineKey olKey(w_id, d_id, o_id, ol_number);
             tx.insert(olTable, olKey.key(),
-                    std::make_tuple(o_id, d_id, w_id, ol_number, ol_i_id[ol_number],
-                        ol_supply_w_id[ol_number], nullptr, ol_quantity, ol_amount, ol_dist_info));
+                    {{
+                    {"ol_o_id", o_id},
+                    {"ol_d_id", d_id},
+                    {"ol_w_id", w_id},
+                    {"ol_number", ol_number},
+                    {"ol_i_id", ol_i_id[ol_number]},
+                    {"ol_supply_w_id", ol_supply_w_id[ol_number]},
+                    {"ol_delivery_d", nullptr},
+                    {"ol_quantity", ol_quantity},
+                    {"ol_amount", ol_amount},
+                    {"ol_dist_info", ol_dist_info}
+                    }});
             // set Result for this order line
             const auto& i_data = boost::any_cast<const crossbow::string&>(item.at("i_data").value());
             const auto& s_data = boost::any_cast<const crossbow::string&>(stock.at("s_data").value());

@@ -116,14 +116,6 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
         // insert into history
         crossbow::string h_data = boost::any_cast<const crossbow::string&>(warehouse.at("w_name").value())
             + boost::any_cast<const crossbow::string&>(district.at("d_name").value());
-        auto history = std::make_tuple(customerKey.c_id,
-                customerKey.d_id,
-                customerKey.w_id,
-                in.d_id,
-                in.w_id,
-                now(),
-                in.h_amount,
-                h_data);
         tell::db::key_t historyKey{
             uint64_t(rnd.randomWithin<uint32_t>(0, std::numeric_limits<uint32_t>::max())) << 8*sizeof(uint32_t) |
             uint64_t(rnd.randomWithin<uint32_t>(0, std::numeric_limits<uint32_t>::max()))
@@ -140,7 +132,17 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
                     uint64_t(rnd.randomWithin<uint32_t>(0, std::numeric_limits<uint32_t>::max()))
             };
         }
-        tx.insert(hTable, historyKey, history);
+        tx.insert(hTable, historyKey,
+                {{
+                {"h_c_id", customerKey.c_id},
+                {"h_c_d_id", customerKey.d_id},
+                {"h_c_w_id", customerKey.w_id},
+                {"h_d_id", in.d_id},
+                {"h_w_id", in.w_id},
+                {"h_date", now()},
+                {"h_amount", in.h_amount},
+                {"h_data", h_data}
+                }});
         tx.commit();
         result.success = true;
     } catch (std::exception& ex) {

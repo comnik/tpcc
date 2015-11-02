@@ -93,6 +93,7 @@ struct NewOrderIn {
 struct NewOrderResult {
     using is_serializable = crossbow::is_serializable;
     struct OrderLine {
+        using is_serializable = crossbow::is_serializable;
         int16_t ol_supply_w_id;
         int32_t ol_i_id;
         crossbow::string i_name;
@@ -128,8 +129,8 @@ struct NewOrderResult {
     std::vector<OrderLine> lines;
 
     template<class Archiver>
-    void operator&(Archiver& ar) const {
-        ar & success = true;
+    void operator&(Archiver& ar) {
+        ar & success;
         ar & error;
         ar & o_id;
         ar & o_ol_cnt;

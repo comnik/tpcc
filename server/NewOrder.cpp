@@ -52,7 +52,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         std::vector<int16_t> ol_supply_w_id(o_ol_cnt);
         for (auto& i : ol_supply_w_id) {
             i = w_id;
-            if (rnd->randomWithin<int>(1, 100) == 1) {
+            if (mNumWarehouses > 1 && rnd->randomWithin<int>(1, 100) == 1) {
                 o_all_local = 0;
                 while (i == w_id) {
                     i = rnd->randomWithin<int16_t>(1, mNumWarehouses);

@@ -68,6 +68,7 @@ public:
                 msg = ex.what();
             }
             mService.post([this, callback, success, msg](){
+                mFiber->wait();
                 mFiber.reset(nullptr);
                 callback(std::make_tuple(success, msg));
             });
@@ -93,6 +94,7 @@ public:
                 msg = ex.what();
             }
             mService.post([this, success, msg, callback](){
+                mFiber->wait();
                 mFiber.reset(nullptr);
                 callback(std::make_pair(success, msg));
             });
@@ -106,6 +108,7 @@ public:
         auto transaction = [this, args, callback](tell::db::Transaction& tx) {
             typename Signature<C>::result res = mTransactions.newOrderTransaction(tx, args);
             mService.post([this, res, callback]() {
+                mFiber->wait();
                 mFiber.reset(nullptr);
                 callback(res);
             });
@@ -119,6 +122,7 @@ public:
         auto transaction = [this, args, callback](tell::db::Transaction& tx) {
             typename Signature<C>::result res = mTransactions.payment(tx, args);
             mService.post([this, res, callback]() {
+                mFiber->wait();
                 mFiber.reset(nullptr);
                 callback(res);
             });
@@ -132,6 +136,7 @@ public:
         auto transaction = [this, args, callback](tell::db::Transaction& tx) {
             typename Signature<C>::result res = mTransactions.orderStatus(tx, args);
             mService.post([this, res, callback]() {
+                mFiber->wait();
                 mFiber.reset(nullptr);
                 callback(res);
             });
@@ -145,6 +150,7 @@ public:
         auto transaction = [this, args, callback](tell::db::Transaction& tx) {
             typename Signature<C>::result res = mTransactions.delivery(tx, args);
             mService.post([this, res, callback]() {
+                mFiber->wait();
                 mFiber.reset(nullptr);
                 callback(res);
             });
@@ -158,6 +164,7 @@ public:
         auto transaction = [this, args, callback](tell::db::Transaction& tx) {
             typename Signature<C>::result res = mTransactions.stockLevel(tx, args);
             mService.post([this, res, callback]() {
+                mFiber->wait();
                 mFiber.reset(nullptr);
                 callback(res);
             });

@@ -76,6 +76,10 @@ int main(int argc, const char** argv) {
         print_help(std::cout, opts);
         return 0;
     }
+    if (numWarehouses == 0) {
+        std::cerr << "Number of warehouses needs to be set" << std::endl;
+        return 1;
+    }
     crossbow::logger::logger->config.level = crossbow::logger::logLevelFromString(logLevel);
     tell::store::ClientConfig config;
     config.commitManager = config.parseCommitManager(commitManager);

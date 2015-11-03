@@ -21,6 +21,7 @@
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
 #include "Connection.hpp"
+#include <crossbow/allocator.hpp>
 #include <crossbow/program_options.hpp>
 #include <crossbow/logger.hpp>
 #include <telldb/TellDB.hpp>
@@ -80,6 +81,9 @@ int main(int argc, const char** argv) {
         std::cerr << "Number of warehouses needs to be set" << std::endl;
         return 1;
     }
+
+    crossbow::allocator::init();
+
     crossbow::logger::logger->config.level = crossbow::logger::logLevelFromString(logLevel);
     tell::store::ClientConfig config;
     config.commitManager = config.parseCommitManager(commitManager);

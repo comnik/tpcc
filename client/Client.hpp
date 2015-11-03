@@ -74,6 +74,7 @@ public:
     }
     void run();
     void populate();
+    void populateItems();
     const std::deque<LogEntry>& log() const { return mLog; }
 private:
     void populate(int16_t lower, int16_t upper);

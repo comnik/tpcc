@@ -148,6 +148,9 @@ int main(int argc, const char** argv) {
                 case tpcc::Command::POPULATE_WAREHOUSE:
                     tName = "Populate";
                     break;
+                case tpcc::Command::POPULATE_ITEMS:
+                    tName = "Populate";
+                    break;
                 case tpcc::Command::CREATE_SCHEMA:
                     tName = "Schema Create";
                     break;

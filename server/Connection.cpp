@@ -54,7 +54,7 @@ public:
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::CREATE_SCHEMA, void>::type
-    execute(const std::tuple<>& args, const Callback callback) {
+    execute(const Callback callback) {
         auto transaction = [this, callback](tell::db::Transaction& tx){
             bool success;
             crossbow::string msg;
@@ -86,6 +86,31 @@ public:
                 auto counter = tx.getCounter("history_counter");
                 Populator populator;
                 populator.populateWarehouse(tx, counter, args);
+                tx.commit();
+                success = true;
+            } catch (std::exception& ex) {
+                tx.rollback();
+                success = false;
+                msg = ex.what();
+            }
+            mService.post([this, success, msg, callback](){
+                mFiber->wait();
+                mFiber.reset(nullptr);
+                callback(std::make_pair(success, msg));
+            });
+        };
+        mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction)));
+    }
+
+    template<Command C, class Callback>
+    typename std::enable_if<C == Command::POPULATE_ITEMS, void>::type
+    execute(const Callback& callback) {
+        auto transaction = [this, callback](tell::db::Transaction& tx) {
+            bool success;
+            crossbow::string msg;
+            try {
+                Populator populator;
+                populator.populateItems(tx);
                 tx.commit();
                 success = true;
             } catch (std::exception& ex) {

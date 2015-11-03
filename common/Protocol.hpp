@@ -58,7 +58,7 @@
 
 namespace tpcc {
 
-#define COMMANDS (POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS, DELIVERY, STOCK_LEVEL)
+#define COMMANDS (POPULATE_ITEMS, POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS, DELIVERY, STOCK_LEVEL)
 
 GEN_COMMANDS(Command, COMMANDS);
 
@@ -76,6 +76,12 @@ template<>
 struct Signature<Command::POPULATE_WAREHOUSE> {
     using result = std::tuple<bool, crossbow::string>;
     using arguments = int16_t;
+};
+
+template<>
+struct Signature<Command::POPULATE_ITEMS> {
+    using result = std::tuple<bool, crossbow::string>;
+    using arguments = void;
 };
 
 template<>
@@ -411,15 +417,26 @@ public:
         read();
     }
 private:
-    template<Command C>
-    void execute() {
+    template<Command C, class Callback>
+    typename std::enable_if<std::is_void<typename Signature<C>::arguments>::value, void>::type
+    execute(Callback callback) {
+        mImpl.template execute<C>(callback);
+    }
+
+    template<Command C, class Callback>
+    typename std::enable_if<!std::is_void<typename Signature<C>::arguments>::value, void>::type
+    execute(Callback callback) {
         using Args = typename Signature<C>::arguments;
-        using Res = typename Signature<C>::result;
-        using IArgs = typename std::conditional<std::is_void<Args>::value, std::tuple<>, Args>::type;
-        IArgs args;
+        Args args;
         crossbow::deserializer des(mBuffer.get() + sizeof(size_t) + sizeof(Command));
         des & args;
-        mImpl.template execute<C>(args, [this](const Res& result) {
+        mImpl.template execute<C>(args, callback);
+    }
+
+    template<Command C>
+    void execute() {
+        using Res = typename Signature<C>::result;
+        execute<C>([this](const Res& result) {
             // Serialize result
             crossbow::sizer sizer;
             sizer & sizer.size;

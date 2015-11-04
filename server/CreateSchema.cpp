@@ -68,9 +68,9 @@ void createCustomer(db::Transaction& transaction) {
     // Primary key: (c_w_id, c_d_id, c_id)
     // c_w_id: 2 bytes
     // c_d_id: 1 byte
-    // c_id: 2 bytes
+    // c_id: 4 bytes
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::SMALLINT, "c_id", true);
+    schema.addField(store::FieldType::INT, "c_id", true);
     schema.addField(store::FieldType::SMALLINT, "c_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "c_w_id", true);
     schema.addField(store::FieldType::TEXT, "c_first", true);

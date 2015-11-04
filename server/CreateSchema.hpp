@@ -72,22 +72,22 @@ struct DistrictKey {
 struct CustomerKey {
     int16_t w_id;
     int16_t d_id;
-    int16_t c_id;
+    int32_t c_id;
 
-    CustomerKey(int16_t w_id, int16_t d_id, int16_t c_id)
+    CustomerKey(int16_t w_id, int16_t d_id, int32_t c_id)
         : w_id(w_id)
         , d_id(d_id)
         , c_id(c_id)
     {}
 
     CustomerKey(tell::db::key_t key)
-        : w_id(key.value >> 3*8)
-        , d_id((key.value >> 2*8) & 0xff)
-        , c_id(key.value & 0xffff)
+        : w_id(key.value >> 5*8)
+        , d_id((key.value >> 4*8) & 0xff)
+        , c_id(key.value & 0xffffffff)
     {}
 
     tell::db::key_t key() const {
-        return tell::db::key_t{(uint64_t(w_id) << 3*8) | (uint64_t(d_id) << 16) | c_id};
+        return tell::db::key_t{(uint64_t(w_id) << 5*8) | (uint64_t(d_id) << 4*8) | c_id};
     }
 };
 

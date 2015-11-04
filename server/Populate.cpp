@@ -133,9 +133,9 @@ void Populator::populateCustomers(tell::db::Transaction &transaction,
                                   int64_t c_since) {
     auto tIdFuture   = transaction.openTable("customer");
     auto table       = tIdFuture.get();
-    uint64_t keyBase = uint64_t(w_id) << (3 * 8);
-    keyBase |= (uint64_t(d_id) << 2 * 8);
-    for (int16_t c_id = 1; c_id <= 3000; ++c_id) {
+    uint64_t keyBase = uint64_t(w_id) << (5 * 8);
+    keyBase |= (uint64_t(d_id) << 4 * 8);
+    for (int32_t c_id = 1; c_id <= 3000; ++c_id) {
         crossbow::string c_credit("GC");
         if (mRandom.randomWithin(0, 9) == 0) {
             c_credit = "BC";
@@ -173,7 +173,7 @@ void Populator::populateCustomers(tell::db::Transaction &transaction,
 }
 
 void Populator::populateHistory(tell::db::Transaction &transaction,
-                                tell::db::Counter &counter, int16_t c_id,
+                                tell::db::Counter &counter, int32_t c_id,
                                 int16_t d_id, int16_t w_id, int64_t n) {
     uint64_t key   = counter.next();
     auto tIdFuture = transaction.openTable("history");
@@ -239,8 +239,8 @@ void Populator::populateOrderLines(tell::db::Transaction &transaction,
             {"ol_delivery_d", o_id < 2101 ? Field(o_entry_d) : Field(nullptr)},
             {"ol_quantity", int16_t(5)},
             {"ol_amount", o_id < 2101
-                            ? o_entry_d
-                            : int64_t(mRandom.randomWithin(1, 999999))},
+                            ? int32_t(0)
+                            : mRandom.randomWithin<int32_t>(1, 999999)},
             {"ol_dist_info", mRandom.astring(24, 24)}}});
     }
 }
@@ -250,7 +250,7 @@ void Populator::populateNewOrders(tell::db::Transaction &transaction,
     auto tIdFuture   = transaction.openTable("new-order");
     auto table       = tIdFuture.get();
     uint64_t baseKey = (uint64_t(w_id) << 5 * 8) | (uint64_t(d_id) << 4 * 8);
-    for (int16_t o_id = 2101; o_id <= 3000; ++o_id) {
+    for (int32_t o_id = 2101; o_id <= 3000; ++o_id) {
         tell::db::key_t key{baseKey | uint64_t(o_id)};
         transaction.insert(
           table, key,

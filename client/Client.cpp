@@ -84,7 +84,6 @@ void Client::run() {
         arg.w_id = mCurrWarehouse;
         arg.d_id = rnd.random<int16_t>(1, 10);
         auto x   = rnd.random(1, 100);
-        auto y = rnd.random(1, 100);
         if (x <= 85) {
             arg.c_w_id = mCurrWarehouse;
             arg.c_d_id = arg.d_id;
@@ -92,8 +91,9 @@ void Client::run() {
             arg.c_w_id = rnd.random<int16_t>(1, mNumWarehouses);
             arg.c_d_id = rnd.random<int16_t>(1, 10);
         }
-        arg.selectByLastName = x <= 60;
-        if (y <= 60) {
+        auto y = rnd.random(1, 100);
+        arg.selectByLastName = y <= 60;
+        if (arg.selectByLastName) {
             arg.c_last = rnd.cLastName(rnd.NURand(255, 0, 999));
         } else {
             arg.c_id = rnd.NURand<int16_t>(1023, 1, 3000);

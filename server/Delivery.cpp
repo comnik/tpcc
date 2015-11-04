@@ -57,7 +57,7 @@ DeliveryResult Transactions::delivery(Transaction& tx, const DeliveryIn& in) {
             tx.remove(noTable, noKey.key(), newOrder);
             nOrder.at("o_carrier_id") = Field::create(in.o_carrier_id);
             tx.update(oTable, oKey.key(), order, nOrder);
-            auto o_ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt"));
+            auto o_ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt").value());
             std::vector<Future<Tuple>> orderLinesF;
             orderLinesF.reserve(o_ol_cnt);
             std::vector<tell::db::key_t> ol_keys;

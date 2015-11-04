@@ -165,7 +165,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             auto& item = items.at(ol_number);
             auto stockId = std::make_pair(ol_i_id[ol_number], ol_supply_w_id[ol_number]);
             auto& stock = stocks.at(stockId);
-            auto ol_dist_info = boost::any_cast<crossbow::string>(stock.at(ol_dist_info_key));
+            auto ol_dist_info = boost::any_cast<crossbow::string>(stock.at(ol_dist_info_key).value());
             auto ol_quantity = rnd->randomWithin<int16_t>(1, 10);
             auto& newStock = newStocks.at(stockId);
             if (newStock.s_quantity > ol_quantity + 10) {

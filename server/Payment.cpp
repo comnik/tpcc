@@ -41,7 +41,7 @@ Future<Tuple> Transactions::getCustomer(Transaction& tx,
                     Field::create(c_last)
                     , Field::create(c_w_id)
                     , Field::create(c_d_id)
-                    , Field::create(nullptr)
+                    , Field::create("")
                     }));
         std::vector<uint16_t> keys;
         for (; !iter.done(); iter.next()) {
@@ -83,14 +83,14 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
         auto nWarehouse = warehouse;
         // update the warehouses ytd
         {
-            auto value = boost::any_cast<int64_t>(warehouse.at("w_ytd"));
+            auto value = boost::any_cast<int64_t>(warehouse.at("w_ytd").value());
             nWarehouse.at("w_ytd") = Field::create(int64_t(value + in.h_amount));
         }
         tx.update(wTable, warehouseKey, warehouse, nWarehouse);
         auto district = districtF.get();
         auto nDistrict = district;
         {
-            auto value = boost::any_cast<int64_t>(district.at("d_ytd"));
+            auto value = boost::any_cast<int64_t>(district.at("d_ytd").value());
             nDistrict.at("d_ytd") = Field::create(int64_t(value + in.h_amount));
         }
         tx.update(dTable, dKey.key(), district, nDistrict);
@@ -105,7 +105,7 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
                     "," + crossbow::to_string(customerKey.d_id) + "," + crossbow::to_string(customerKey.w_id) +
                     "," + crossbow::to_string(in.d_id) + "," + crossbow::to_string(in.w_id) +
                     "," + crossbow::to_string(in.h_amount);
-                auto c_data = boost::any_cast<crossbow::string>(nCustomer.at("c_data"));
+                auto c_data = boost::any_cast<crossbow::string>(nCustomer.at("c_data").value());
                 c_data.insert(0, histInfo);
                 if (c_data.size() > 500) {
                     c_data.resize(500);

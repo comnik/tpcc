@@ -58,7 +58,7 @@ StockLevelResult Transactions::stockLevel(Transaction& tx, const StockLevelIn& i
         for (auto orderF : ordersF) {
             olKey.o_id = orderF.first;
             auto order = orderF.second.get();
-            auto o_ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt"));
+            auto o_ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt").value());
             for (decltype(o_ol_cnt) ol_number = 1; ol_number < o_ol_cnt; ++ol_number) {
                 olKey.ol_number = ol_number;
                 orderlinesF.emplace_back(tx.get(olTable, olKey.key()));
@@ -69,7 +69,7 @@ StockLevelResult Transactions::stockLevel(Transaction& tx, const StockLevelIn& i
         std::unordered_map<int32_t, Future<Tuple>> stocksF;
         for (auto& olF : orderlinesF) {
             auto ol = olF.get();
-            auto ol_i_id = boost::any_cast<int32_t>(ol.at("ol_i_id"));
+            auto ol_i_id = boost::any_cast<int32_t>(ol.at("ol_i_id").value());
             if (stocksF.count(ol_i_id) == 0) {
                 stocksF.emplace(ol_i_id, tx.get(sTable, tell::db::key_t{(uint64_t(in.w_id) << 4*8) | uint64_t(ol_i_id)}));
             }

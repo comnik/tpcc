@@ -93,7 +93,7 @@ struct Signature<Command::CREATE_SCHEMA> {
 struct NewOrderIn {
     int16_t w_id;
     int16_t d_id;
-    int16_t c_id;
+    int32_t c_id;
 };
 
 struct NewOrderResult {
@@ -126,7 +126,7 @@ struct NewOrderResult {
     int32_t o_id;
     int16_t o_ol_cnt;
     crossbow::string c_last;
-    int16_t c_credit;
+    crossbow::string c_credit;
     int32_t c_discount;
     int32_t w_tax;
     int32_t d_tax;
@@ -162,7 +162,7 @@ struct PaymentIn {
     bool selectByLastName;
     int16_t w_id;
     int16_t d_id;
-    int16_t c_id;
+    int32_t c_id;
     int16_t c_w_id;
     int16_t c_d_id;
     crossbow::string c_last;
@@ -204,7 +204,7 @@ struct OrderStatusIn {
     bool selectByLastName;
     int16_t w_id;
     int16_t d_id;
-    int16_t c_id;
+    int32_t c_id;
     crossbow::string c_last;
 
     template<class A>

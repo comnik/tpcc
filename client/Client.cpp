@@ -75,7 +75,7 @@ void Client::run() {
         if (arg.selectByLastName) {
             arg.c_last = rnd.cLastName(rnd.NURand(255, 0, 999));
         } else {
-            arg.c_id = rnd.NURand<int16_t>(1023, 1, 3000);
+            arg.c_id = rnd.NURand<int32_t>(1023, 1, 3000);
         }
         execute<Command::ORDER_STATUS>(arg);
     } else if (n <= 55) {
@@ -96,7 +96,7 @@ void Client::run() {
         if (arg.selectByLastName) {
             arg.c_last = rnd.cLastName(rnd.NURand(255, 0, 999));
         } else {
-            arg.c_id = rnd.NURand<int16_t>(1023, 1, 3000);
+            arg.c_id = rnd.NURand<int32_t>(1023, 1, 3000);
         }
         arg.h_amount = rnd.random<int32_t>(100, 500000);
         execute<Command::PAYMENT>(arg);
@@ -105,7 +105,7 @@ void Client::run() {
         NewOrderIn arg;
         arg.w_id = mCurrWarehouse;
         arg.d_id = rnd.random<int16_t>(1, 10);
-        arg.c_id = rnd.NURand<int16_t>(1023, 1, 3000);
+        arg.c_id = rnd.NURand<int32_t>(1023, 1, 3000);
         execute<Command::NEW_ORDER>(arg);
     }
     mCurrWarehouse = mCurrWarehouse == mWareHouseUpper ? mWareHouseLower

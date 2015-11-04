@@ -111,7 +111,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
                 {"no_w_id", w_id}
                 }});
         // generate random items
-        std::vector<int16_t> ol_i_id;
+        std::vector<int32_t> ol_i_id;
         for (int16_t i = 0; i < o_ol_cnt; ++i) {
             auto i_id = rnd->NURand<int32_t>(8191,1,100000);
             ol_i_id.push_back(i_id);
@@ -119,26 +119,26 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         // get the items
         // get the stocks
         ol_i_id.reserve(o_ol_cnt);
-        std::unordered_map<int16_t, Future<Tuple>> itemsF;
-        std::unordered_map<int16_t, Tuple> items;
-        std::unordered_map<std::pair<int16_t, int16_t>, Future<Tuple>> stocksF;
-        std::unordered_map<std::pair<int16_t, int16_t>, Tuple> stocks;
+        std::unordered_map<ItemKey, Future<Tuple>> itemsF;
+        std::unordered_map<ItemKey, Tuple> items;
+        std::unordered_map<StockKey, Future<Tuple>> stocksF;
+        std::unordered_map<StockKey, Tuple> stocks;
         itemsF.reserve(o_ol_cnt);
         items.reserve(o_ol_cnt);
         stocksF.reserve(o_ol_cnt);
         stocks.reserve(o_ol_cnt);
         for (int16_t i = 0; i < o_ol_cnt; ++i) {
             auto i_id = ol_i_id[i];
-            auto supply_w_id = ol_supply_w_id[i];
+            ItemKey iKey(i_id);
             if (itemsF.count(i_id) == 0) {
-                itemsF.emplace(i_id, tx.get(iTable, tell::db::key_t{uint64_t(i_id)}));
+                itemsF.emplace(iKey, tx.get(iTable, iKey.key()));
             }
-            if (stocksF.count(std::make_pair(i_id, supply_w_id)) == 0) {
-                StockKey sKey(supply_w_id, i_id);
-                stocksF.emplace(std::make_pair(i_id, supply_w_id), tx.get(sTable, sKey.key()));
+            StockKey sKey(ol_supply_w_id[i], i_id);
+            if (stocksF.count(sKey) == 0) {
+                stocksF.emplace(sKey, tx.get(sTable, sKey.key()));
             }
         }
-        std::unordered_map<std::pair<int16_t, int16_t>, NewStock> newStocks;
+        std::unordered_map<StockKey, NewStock> newStocks;
         for (auto& p : stocksF) {
             auto stock = p.second.get();
             NewStock nStock;
@@ -161,9 +161,11 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         }
         int32_t ol_amount_sum = 0;
         // insert the order lines
-        for (int16_t ol_number = 1; ol_number <= o_ol_cnt; ++ol_number) {
-            auto& item = items.at(ol_number);
-            auto stockId = std::make_pair(ol_i_id[ol_number], ol_supply_w_id[ol_number]);
+        for (int16_t i = 1; i < o_ol_cnt; ++i) {
+            int16_t ol_number = i + 1;
+            ItemKey itemId(ol_i_id[i]);
+            auto& item = items.at(itemId);
+            StockKey stockId(ol_supply_w_id[i], ol_i_id[i]);
             auto& stock = stocks.at(stockId);
             auto ol_dist_info = boost::any_cast<crossbow::string>(stock.at(ol_dist_info_key).value());
             auto ol_quantity = rnd->randomWithin<int16_t>(1, 10);
@@ -175,7 +177,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             }
             newStock.s_ytd += ol_quantity;
             ++newStock.s_order_cnt;
-            if (ol_supply_w_id[ol_number] != w_id) ++newStock.s_remote_cnt;
+            if (ol_supply_w_id[i] != w_id) ++newStock.s_remote_cnt;
             auto i_price = boost::any_cast<int32_t>(item.at("i_price").value());
             int32_t ol_amount = i_price * int32_t(ol_quantity);
             ol_amount_sum += ol_amount;
@@ -186,8 +188,8 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
                     {"ol_d_id", d_id},
                     {"ol_w_id", w_id},
                     {"ol_number", ol_number},
-                    {"ol_i_id", ol_i_id[ol_number]},
-                    {"ol_supply_w_id", ol_supply_w_id[ol_number]},
+                    {"ol_i_id", ol_i_id[i]},
+                    {"ol_supply_w_id", ol_supply_w_id[i]},
                     {"ol_delivery_d", nullptr},
                     {"ol_quantity", ol_quantity},
                     {"ol_amount", ol_amount},
@@ -197,8 +199,8 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             const auto& i_data = boost::any_cast<const crossbow::string&>(item.at("i_data").value());
             const auto& s_data = boost::any_cast<const crossbow::string&>(stock.at("s_data").value());
             NewOrderResult::OrderLine lineRes;
-            lineRes.ol_supply_w_id = ol_supply_w_id[ol_number];
-            lineRes.ol_i_id = ol_i_id[ol_number];
+            lineRes.ol_supply_w_id = ol_supply_w_id[i];
+            lineRes.ol_i_id = ol_i_id[i];
             lineRes.i_name = boost::any_cast<crossbow::string>(item.at("i_name").value());
             lineRes.ol_quantity = ol_quantity;
             lineRes.s_quantity = newStock.s_quantity;
@@ -212,14 +214,13 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         }
         // update stock-entries
         for (const auto& p : stocks) {
-            StockKey sKey(p.first.second, p.first.first);
             const auto& nStock = newStocks.at(p.first);
             auto n = p.second;
             n.at("s_quantity") = Field::create(nStock.s_quantity);
-            n.at("s_ytd") = Field::create(nStock.s_quantity);
-            n.at("s_order_cnt") = Field::create(nStock.s_quantity);
-            n.at("s_remote_cnt") = Field::create(nStock.s_quantity);
-            tx.update(sTable, sKey.key(), p.second, n);
+            n.at("s_ytd") = Field::create(nStock.s_ytd);
+            n.at("s_order_cnt") = Field::create(nStock.s_order_cnt);
+            n.at("s_remote_cnt") = Field::create(nStock.s_remote_cnt);
+            tx.update(sTable, p.first.key(), p.second, n);
         }
         // 1% of transactions need to abort
         if (rnd->randomWithin<int>(1, 100) == 1) {
@@ -232,7 +233,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             result.o_id = o_id;
             result.o_ol_cnt = o_ol_cnt;
             result.c_last = boost::any_cast<crossbow::string>(customer.at("c_last").value());
-            result.c_credit = boost::any_cast<int16_t>(customer.at("c_credit").value());
+            result.c_credit = boost::any_cast<crossbow::string>(customer.at("c_credit").value());
             result.c_discount = boost::any_cast<int32_t>(customer.at("c_discount").value());
             result.w_tax = boost::any_cast<int32_t>(warehouse.at("w_tax").value());
             result.d_tax = boost::any_cast<int32_t>(district.at("d_tax").value());

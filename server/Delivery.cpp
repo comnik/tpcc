@@ -68,11 +68,11 @@ DeliveryResult Transactions::delivery(Transaction& tx, const DeliveryIn& in) {
                 orderLinesF.emplace_back(tx.get(olTable, k));
                 ol_keys.emplace_back(k);
             }
-            CustomerKey cKey{in.w_id, d_id, boost::any_cast<int16_t>(order.at("o_c_id").value())};
+            CustomerKey cKey{in.w_id, d_id, boost::any_cast<int32_t>(order.at("o_c_id").value())};
             auto customerF = tx.get(cTable, cKey.key());
             auto customer = customerF.get();
             int64_t amount = 0;
-            for (size_t i = orderLinesF.size(); i > 0; ++i) {
+            for (size_t i = orderLinesF.size(); i > 0; --i) {
                 auto orderline = orderLinesF[i - 1].get();
                 auto nOrderline = orderline;
                 amount += boost::any_cast<int32_t>(orderline.at("ol_amount").value());

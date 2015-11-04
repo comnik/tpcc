@@ -33,7 +33,7 @@ namespace tpcc {
 void Populator::populateItems(tell::db::Transaction &transaction) {
     auto tIdFuture = transaction.openTable("item");
     auto tId = tIdFuture.get();
-    for (int i = 1; i <= 100000; ++i) {
+    for (int32_t i = 1; i <= 100000; ++i) {
         transaction.insert(
           tId, tell::db::key_t{uint64_t(i)},
           {{{"i_id", i},
@@ -69,7 +69,7 @@ void Populator::populateStocks(tell::db::Transaction &transaction,
     auto table       = tIdFuture.get();
     uint64_t keyBase = uint64_t(w_id);
     keyBase = keyBase << 32;
-    for (int s_i_id = 1; s_i_id <= 100000; ++s_i_id) {
+    for (int32_t s_i_id = 1; s_i_id <= 100000; ++s_i_id) {
         tell::db::key_t key = tell::db::key_t{keyBase | uint64_t(s_i_id)};
         auto s_data = mRandom.astring(26, 50);
         if (mRandom.randomWithin(0, 9) == 0) {
@@ -141,9 +141,9 @@ void Populator::populateCustomers(tell::db::Transaction &transaction,
             c_credit = "BC";
         }
         uint64_t key = keyBase | uint64_t(c_id);
-        int rNum = c_id;
+        int32_t rNum = c_id - 1;
         if (rNum >= 1000) {
-            rNum = int16_t(mRandom.NURand<int16_t>(255, 0, 999));
+            rNum = mRandom.NURand<int32_t>(255, 0, 999);
         }
         transaction.insert(
           table, tell::db::key_t{key},

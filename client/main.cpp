@@ -116,7 +116,7 @@ int main(int argc, const char** argv) {
         if (populate) {
             auto& cmds = clients[0].commands();
             cmds.execute<tpcc::Command::CREATE_SCHEMA>(
-                    [&clients, numClients, wareHousesPerClient, numWarehouses](const err_code& ec,
+                    [&clients](const err_code& ec,
                         const std::tuple<bool, crossbow::string>& res){
                 if (ec) {
                     LOG_ERROR(ec.message());
@@ -126,9 +126,22 @@ int main(int argc, const char** argv) {
                     LOG_ERROR(std::get<1>(res));
                     return;
                 }
-                for (auto& client : clients) {
-                    client.populate();
-                }
+
+                auto& cmds = clients[0].commands();
+                cmds.execute<tpcc::Command::POPULATE_ITEMS>([&clients](const err_code& ec, const std::tuple<bool, crossbow::string>& res){
+                    if (ec) {
+                        LOG_ERROR(ec.message());
+                        return;
+                    }
+                    if (!std::get<0>(res)) {
+                        LOG_ERROR(std::get<1>(res));
+                        return;
+                    }
+
+                    for (auto& client : clients) {
+                        client.populate();
+                    }
+                });
             });
         } else {
             for (decltype(clients.size()) i = 0; i < clients.size(); ++i) {
@@ -177,6 +190,7 @@ int main(int argc, const char** argv) {
                     << e.error << std::endl;
             }
         }
+        std::cout << '\a';
     } catch (std::exception& e) {
         std::cerr << e.what() << std::endl;
     }

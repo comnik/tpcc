@@ -24,6 +24,8 @@
 #include <telldb/Types.hpp>
 #include <limits>
 
+#include <boost/functional/hash.hpp>
+
 namespace tell {
 namespace db {
 
@@ -156,6 +158,14 @@ struct ItemKey {
     }
 };
 
+inline bool operator ==(const ItemKey& lhs, const ItemKey& rhs) {
+    return lhs.i_id == rhs.i_id;
+}
+
+inline bool operator !=(const ItemKey& lhs, const ItemKey& rhs) {
+    return !(lhs == rhs);
+}
+
 struct StockKey {
     int16_t w_id;
     int32_t i_id;
@@ -174,4 +184,34 @@ struct StockKey {
         return tell::db::key_t{(uint64_t(w_id) << 4*8) | uint64_t(i_id)};
     }
 };
+
+inline bool operator ==(const StockKey& lhs, const StockKey& rhs) {
+    return (lhs.w_id == rhs.w_id && lhs.i_id == rhs.i_id);
+}
+
+inline bool operator !=(const StockKey& lhs, const StockKey& rhs) {
+    return !(lhs == rhs);
+}
+
 } // namespace tpcc
+
+namespace std {
+
+template <>
+struct hash<tpcc::StockKey> {
+    size_t operator ()(const tpcc::StockKey& value) const {
+        size_t seed = 0;
+        boost::hash_combine(seed, std::hash<decltype(value.w_id)>()(value.w_id));
+        boost::hash_combine(seed, std::hash<decltype(value.i_id)>()(value.i_id));
+        return seed;
+    }
+};
+
+template <>
+struct hash<tpcc::ItemKey> {
+    size_t operator ()(const tpcc::ItemKey& value) const {
+        return std::hash<decltype(value.i_id)>()(value.i_id);
+    }
+};
+
+} // namespace std

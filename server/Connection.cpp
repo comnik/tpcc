@@ -195,7 +195,7 @@ public:
             });
         };
         mFiber.reset(new tell::db::TransactionFiber<void>(mClientManager.startTransaction(transaction,
-                        tell::store::TransactionType::ANALYTICAL)));
+                        tell::store::TransactionType::READ_ONLY)));
     }
 };
 

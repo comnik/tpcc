@@ -43,7 +43,7 @@ Future<Tuple> Transactions::getCustomer(Transaction& tx,
                     , Field::create(c_d_id)
                     , Field::create("")
                     }));
-        std::vector<uint16_t> keys;
+        std::vector<tell::db::key_t> keys;
         for (; !iter.done(); iter.next()) {
             auto k = iter.key();
             if (boost::any_cast<const crossbow::string&>(k[0].value()) != c_last) {
@@ -53,9 +53,9 @@ Future<Tuple> Transactions::getCustomer(Transaction& tx,
         }
         auto pos = keys.size();
         pos = pos % 2 == 0 ? (pos / 2) : (pos / 2 + 1);
-        customerKey = tell::db::key_t{keys[pos]};
+        customerKey = CustomerKey{keys[pos]};
     } else {
-        auto c_id = rnd.NURand<int16_t>(1023,1,3000);
+        auto c_id = rnd.NURand<int32_t>(1023,1,3000);
         customerKey = CustomerKey{c_w_id, c_d_id, c_id};
     }
     return tx.get(customerTable, customerKey.key());

@@ -170,12 +170,11 @@ int main(int argc, const char** argv) {
                     tName = "Payment";
                     break;
                 }
-                out << std::chrono::duration_cast<std::chrono::seconds>(e.start - startTime).count()
-                    << std::chrono::duration_cast<std::chrono::seconds>(e.end - startTime).count()
-                    << tName
-                    << (e.success ? "true" : "false")
-                    << e.error
-                    << std::endl;
+                out << std::chrono::duration_cast<std::chrono::seconds>(e.start - startTime).count() << ','
+                    << std::chrono::duration_cast<std::chrono::seconds>(e.end - startTime).count() << ','
+                    << tName << ','
+                    << (e.success ? "true" : "false") << ','
+                    << e.error << std::endl;
             }
         }
     } catch (std::exception& e) {

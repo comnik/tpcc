@@ -22,6 +22,7 @@
  */
 #include "Transactions.hpp"
 #include <telldb/Exceptions.hpp>
+#include <sstream>
 
 using namespace tell::db;
 
@@ -46,6 +47,13 @@ OrderStatusResult Transactions::orderStatus(Transaction& tx, const OrderStatusIn
                 , Field::create(cKey.c_id)
                 , Field::create(std::numeric_limits<int32_t>::max())
                 });
+        if (iter.done()) {
+            result.success = false;
+            std::stringstream errstream;
+            errstream << "Customer " << in.c_last << "," << in.w_id << "," << in.d_id << " does not exist";
+            result.error = errstream.str();
+            return result;
+        }
         OrderKey oKey{iter.value()};
         auto orderF = tx.get(oTable, iter.value());
         auto order = orderF.get();

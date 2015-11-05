@@ -161,7 +161,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         }
         int32_t ol_amount_sum = 0;
         // insert the order lines
-        for (int16_t i = 1; i < o_ol_cnt; ++i) {
+        for (int16_t i = 0; i < o_ol_cnt; ++i) {
             int16_t ol_number = i + 1;
             ItemKey itemId(ol_i_id[i]);
             auto& item = items.at(itemId);

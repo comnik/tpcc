@@ -61,6 +61,7 @@ public:
         , mWareHouseLower(wareHouseLower)
         , mWareHouseUpper(wareHouseUpper)
         , mCurrWarehouse(mWareHouseLower)
+        , mCurrDistrict(1)
         , mEndTime(endTime)
     {}
     Socket& socket() {

@@ -89,7 +89,7 @@ struct CustomerKey {
     {}
 
     tell::db::key_t key() const {
-        return tell::db::key_t{(uint64_t(w_id) << 5*8) | (uint64_t(d_id) << 4*8) | c_id};
+        return tell::db::key_t{(uint64_t(w_id) << 5*8) | (uint64_t(d_id) << 4*8) | uint64_t(c_id)};
     }
 };
 

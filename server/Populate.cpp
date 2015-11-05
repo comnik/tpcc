@@ -195,7 +195,7 @@ void Populator::populateOrders(tell::db::Transaction &transaction, int16_t d_id,
     auto table = tIdFuture.get();
     std::vector<int32_t> c_ids(3000, 0);
     for (int32_t i = 0; i < 3000; ++i) {
-        c_ids[i] = i;
+        c_ids[i] = i + 1;
     }
     std::shuffle(c_ids.begin(), c_ids.end(), mRandom.randomDevice());
     uint64_t baseKey = (uint64_t(w_id) << 5 * 8) | (uint64_t(d_id) << 32);

@@ -51,9 +51,14 @@ Future<Tuple> Transactions::getCustomer(Transaction& tx,
             }
             keys.push_back(iter.value());
         }
+        if (keys.empty()) {
+            crossbow::string msg = "No customer found for name ";
+            msg.append(c_last);
+            throw std::runtime_error(msg.c_str());
+        }
         auto pos = keys.size();
         pos = pos % 2 == 0 ? (pos / 2) : (pos / 2 + 1);
-        customerKey = CustomerKey{keys[pos]};
+        customerKey = CustomerKey{keys.at(pos - 1)};
     } else {
         auto c_id = rnd.NURand<int32_t>(1023,1,3000);
         customerKey = CustomerKey{c_w_id, c_d_id, c_id};
@@ -116,22 +121,10 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
         // insert into history
         crossbow::string h_data = boost::any_cast<const crossbow::string&>(warehouse.at("w_name").value())
             + boost::any_cast<const crossbow::string&>(district.at("d_name").value());
-        tell::db::key_t historyKey{
-            uint64_t(rnd.randomWithin<uint32_t>(0, std::numeric_limits<uint32_t>::max())) << 8*sizeof(uint32_t) |
-            uint64_t(rnd.randomWithin<uint32_t>(0, std::numeric_limits<uint32_t>::max()))
-        };
-        while (true) {
-            auto h = tx.get(hTable, historyKey);
-            try {
-                h.get();
-            } catch (...) {
-                break;
-            }
-            historyKey = tell::db::key_t{
-                uint64_t(rnd.randomWithin<uint32_t>(0, std::numeric_limits<uint32_t>::max())) << 8*sizeof(uint32_t) |
-                    uint64_t(rnd.randomWithin<uint32_t>(0, std::numeric_limits<uint32_t>::max()))
-            };
-        }
+
+        auto counter = tx.getCounter("history_counter");
+        tell::db::key_t historyKey{counter.next()};
+
         tx.insert(hTable, historyKey,
                 {{
                 {"h_c_id", customerKey.c_id},

@@ -50,7 +50,8 @@ OrderStatusResult Transactions::orderStatus(Transaction& tx, const OrderStatusIn
         if (iter.done()) {
             result.success = false;
             std::stringstream errstream;
-            errstream << "Customer " << in.c_last << "," << in.w_id << "," << in.d_id << " does not exist";
+            errstream << "Customer name=" << in.c_last << ", w_id=" << in.w_id << ", d_id=" << in.d_id << ", c_id="
+                    << cKey.c_id << " does not exist";
             result.error = errstream.str();
             return result;
         }

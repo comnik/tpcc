@@ -44,6 +44,9 @@ void Client::execute(const typename Signature<C>::arguments &arg) {
               return;
           }
           auto end = Clock::now();
+          if (!result.success) {
+              LOG_ERROR("Transaction unsuccessful [error = %1%]", result.error);
+          }
           mLog.push_back(LogEntry{result.success, result.error, C, now, end});
           run();
       },

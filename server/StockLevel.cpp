@@ -55,11 +55,11 @@ StockLevelResult Transactions::stockLevel(Transaction& tx, const StockLevelIn& i
         // get the order-lines
         std::vector<Future<Tuple>> orderlinesF;
         OrderlineKey olKey{in.w_id, in.d_id, 0, 0};
-        for (auto orderF : ordersF) {
+        for (auto& orderF : ordersF) {
             olKey.o_id = orderF.first;
             auto order = orderF.second.get();
             auto o_ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt").value());
-            for (decltype(o_ol_cnt) ol_number = 1; ol_number < o_ol_cnt; ++ol_number) {
+            for (decltype(o_ol_cnt) ol_number = 1; ol_number <= o_ol_cnt; ++ol_number) {
                 olKey.ol_number = ol_number;
                 orderlinesF.emplace_back(tx.get(olTable, olKey.key()));
             }

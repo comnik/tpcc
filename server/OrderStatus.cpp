@@ -44,7 +44,7 @@ OrderStatusResult Transactions::orderStatus(Transaction& tx, const OrderStatusIn
                 Field::create(in.w_id)
                 , Field::create(in.d_id)
                 , Field::create(cKey.c_id)
-                , Field::create(int32_t(0))
+                , Field::create(std::numeric_limits<int32_t>::max())
                 });
         OrderKey oKey{iter.value()};
         auto orderF = tx.get(oTable, iter.value());

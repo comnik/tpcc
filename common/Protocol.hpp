@@ -58,7 +58,7 @@
 
 namespace tpcc {
 
-#define COMMANDS (POPULATE_ITEMS, POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS, DELIVERY, STOCK_LEVEL)
+#define COMMANDS (POPULATE_ITEMS, POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS, DELIVERY, STOCK_LEVEL, EXIT)
 
 GEN_COMMANDS(Command, COMMANDS);
 
@@ -87,6 +87,12 @@ struct Signature<Command::POPULATE_ITEMS> {
 template<>
 struct Signature<Command::CREATE_SCHEMA> {
     using result = std::tuple<bool, crossbow::string>;
+    using arguments = void;
+};
+
+template<>
+struct Signature<Command::EXIT> {
+    using result = void;
     using arguments = void;
 };
 
@@ -336,8 +342,28 @@ public:
         : mSocket(socket), mCurrentRequest(new uint8_t[mCurrSize])
     {
     }
+
     template<class Callback, class Result>
-    void readResonse(const Callback& callback, size_t bytes_read = 0) {
+    typename std::enable_if<std::is_void<Result>::value, void>::type
+    readResponse(const Callback& callback, size_t bytes_read = 0) {
+        assert(bytes_read <= 1);
+        if (bytes_read) {
+            boost::system::error_code noError;
+            callback(noError);
+        }
+        mSocket.async_read_some(boost::asio::buffer(mCurrentRequest.get(), mCurrSize),
+                [this, callback, bytes_read](const boost::system::error_code& ec, size_t br){
+                    if (ec) {
+                        error<Result>(ec, callback);
+                        return;
+                    }
+                    readResponse<Callback, Result>(callback, bytes_read + br);
+                });
+    }
+
+    template<class Callback, class Result>
+    typename std::enable_if<!std::is_void<Result>::value, void>::type
+    readResponse(const Callback& callback, size_t bytes_read = 0) {
         auto respSize = *reinterpret_cast<size_t*>(mCurrentRequest.get());
         if (bytes_read >= 8 && respSize == bytes_read) {
             // response read
@@ -358,8 +384,21 @@ public:
                         Result res;
                         callback(ec, res);
                     }
-                    readResonse<Callback, Result>(callback, bytes_read + br);
+                    readResponse<Callback, Result>(callback, bytes_read + br);
                 });
+    }
+
+    template<class Res, class Callback>
+    typename std::enable_if<std::is_void<Res>::value, void>::type
+    error(const boost::system::error_code& ec, const Callback& callback) {
+        callback(ec);
+    }
+
+    template<class Res, class Callback>
+    typename std::enable_if<!std::is_void<Res>::value, void>::type
+    error(const boost::system::error_code& ec, const Callback& callback) {
+        Res res;
+        callback(ec, res);
     }
 
     template<Command C, class Callback, class... Args>
@@ -386,14 +425,12 @@ public:
         boost::asio::async_write(mSocket, boost::asio::buffer(mCurrentRequest.get(), sizer.size),
                     [this, callback](const boost::system::error_code& ec, size_t){
                         if (ec) {
-                            ResType res;
-                            callback(ec, res);
+                            error<ResType>(ec, callback);
                             return;
                         }
-                        readResonse<Callback, ResType>(callback);
+                        readResponse<Callback, ResType>(callback);
                     });
     }
-
 };
 
 } // namespace client
@@ -407,6 +444,7 @@ class Server {
     size_t mBufSize = 1024;
     std::unique_ptr<uint8_t[]> mBuffer;
     using error_code = boost::system::error_code;
+    bool doQuit = false;
 public:
     Server(Implementation& impl, boost::asio::ip::tcp::socket& socket)
         : mImpl(impl)
@@ -415,6 +453,9 @@ public:
     {}
     void run() {
         read();
+    }
+    void quit() {
+        doQuit = true;
     }
 private:
     template<Command C, class Callback>
@@ -434,7 +475,25 @@ private:
     }
 
     template<Command C>
-    void execute() {
+    typename std::enable_if<std::is_void<typename Signature<C>::result>::value, void>::type execute() {
+        execute<C>([this]() {
+            // send the result back
+            mBuffer[0] = 1;
+            boost::asio::async_write(mSocket,
+                    boost::asio::buffer(mBuffer.get(), 1),
+                    [this](const error_code& ec, size_t bytes_written) {
+                        if (ec) {
+                            std::cerr << ec.message() << std::endl;
+                            return;
+                        }
+                        read(0);
+                    }
+            );
+        });
+    }
+
+    template<Command C>
+    typename std::enable_if<!std::is_void<typename Signature<C>::result>::value, void>::type execute() {
         using Res = typename Signature<C>::result;
         execute<C>([this](const Res& result) {
             // Serialize result
@@ -462,6 +521,9 @@ private:
         });
     }
     void read(size_t bytes_read = 0) {
+        if (bytes_read == 0 && doQuit) {
+            mSocket.get_io_service().stop();
+        }
         size_t reqSize = 0;
         if (bytes_read != 0) {
             reqSize = *reinterpret_cast<size_t*>(mBuffer.get());

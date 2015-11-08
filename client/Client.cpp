@@ -35,6 +35,8 @@ void Client::execute(const typename Signature<C>::arguments &arg) {
     if (now > mEndTime) {
         // Time's up
         // benchmarking finished
+        mSocket.shutdown(Socket::shutdown_both);
+        mSocket.close();
         return;
     }
     mCmds.execute<C>(
@@ -138,8 +140,11 @@ void Client::populate(int16_t lower, int16_t upper) {
           }
           LOG_ASSERT(std::get<0>(res), std::get<1>(res));
           LOG_INFO(("Populated Warehouse " + crossbow::to_string(lower)));
-          if (lower == upper)
+          if (lower == upper) {
+              mSocket.shutdown(Socket::shutdown_both);
+              mSocket.close();
               return; // population done
+          }
           populate(lower + 1, upper);
       },
       lower);

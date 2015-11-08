@@ -39,7 +39,7 @@ OrderStatusResult Transactions::orderStatus(Transaction& tx, const OrderStatusIn
         auto olTable = olTableF.get();
         // get Customer
         CustomerKey cKey{0, 0, 0};
-        auto customerF = getCustomer(tx, in.selectByLastName, in.c_last, in.w_id, in.d_id, cTable, cKey);
+        auto customerF = getCustomer(tx, in.selectByLastName, in.c_last, in.w_id, in.d_id, in.c_id, cTable, cKey);
         // get newest order
         auto iter = tx.reverse_lower_bound(oTable, "order_idx", {
                 Field::create(in.w_id)

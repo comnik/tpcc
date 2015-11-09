@@ -42,10 +42,10 @@ OrderStatusResult Transactions::orderStatus(Transaction& tx, const OrderStatusIn
         auto customerF = getCustomer(tx, in.selectByLastName, in.c_last, in.w_id, in.d_id, cTable, cKey);
         // get newest order
         auto iter = tx.reverse_lower_bound(oTable, "order_idx", {
-                Field::create(in.w_id)
-                , Field::create(in.d_id)
-                , Field::create(cKey.c_id)
-                , Field::create(std::numeric_limits<int32_t>::max())
+                Field(in.w_id)
+                , Field(in.d_id)
+                , Field(cKey.c_id)
+                , Field(std::numeric_limits<int32_t>::max())
                 });
         if (iter.done()) {
             result.success = false;
@@ -59,7 +59,7 @@ OrderStatusResult Transactions::orderStatus(Transaction& tx, const OrderStatusIn
         auto orderF = tx.get(oTable, iter.value());
         auto order = orderF.get();
         auto customer = customerF.get();
-        auto ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt").value());
+        auto ol_cnt = order.at("o_ol_cnt").value<int16_t>();
         // To get the order lines, we could use an index - but this is not necessary,
         // since we can generate all primary keys instead
         OrderlineKey olKey{in.w_id, in.d_id, oKey.o_id, int16_t(1)};

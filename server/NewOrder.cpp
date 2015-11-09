@@ -87,10 +87,10 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         auto warehouse = warehouseF.get();
         auto districtNew = district;
         auto d_next_o_id = district.at("d_next_o_id");
-        districtNew.at("d_next_o_id") += Field::create(int32_t(1));
+        districtNew.at("d_next_o_id") += Field(int32_t(1));
         tx.update(dTable, dKey.key(), district, districtNew);
         // insert order
-        auto o_id = boost::any_cast<int32_t>(d_next_o_id.value());
+        auto o_id = d_next_o_id.value<int32_t>();
         OrderKey oKey(w_id, d_id, o_id);
         tx.insert(oTable, oKey.key(),
                 {{
@@ -142,10 +142,10 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         for (auto& p : stocksF) {
             auto stock = p.second.get();
             NewStock nStock;
-            nStock.s_quantity = boost::any_cast<int32_t>(stock.at("s_quantity").value());
-            nStock.s_ytd = boost::any_cast<int32_t>(stock.at("s_ytd").value());
-            nStock.s_order_cnt = boost::any_cast<int16_t>(stock.at("s_order_cnt").value());
-            nStock.s_remote_cnt = boost::any_cast<int16_t>(stock.at("s_remote_cnt").value());
+            nStock.s_quantity = stock.at("s_quantity").value<int32_t>();
+            nStock.s_ytd = stock.at("s_ytd").value<int32_t>();
+            nStock.s_order_cnt = stock.at("s_order_cnt").value<int16_t>();
+            nStock.s_remote_cnt = stock.at("s_remote_cnt").value<int16_t>();
             newStocks.emplace(p.first, std::move(nStock));
             stocks.emplace(p.first, std::move(stock));
         }
@@ -167,7 +167,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             auto& item = items.at(itemId);
             StockKey stockId(ol_supply_w_id[i], ol_i_id[i]);
             auto& stock = stocks.at(stockId);
-            auto ol_dist_info = boost::any_cast<crossbow::string>(stock.at(ol_dist_info_key).value());
+            auto ol_dist_info = stock.at(ol_dist_info_key).value<crossbow::string>();
             auto ol_quantity = rnd->randomWithin<int16_t>(1, 10);
             auto& newStock = newStocks.at(stockId);
             if (newStock.s_quantity > ol_quantity + 10) {
@@ -178,7 +178,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             newStock.s_ytd += ol_quantity;
             ++newStock.s_order_cnt;
             if (ol_supply_w_id[i] != w_id) ++newStock.s_remote_cnt;
-            auto i_price = boost::any_cast<int32_t>(item.at("i_price").value());
+            auto i_price = item.at("i_price").value<int32_t>();
             int32_t ol_amount = i_price * int32_t(ol_quantity);
             ol_amount_sum += ol_amount;
             OrderlineKey olKey(w_id, d_id, o_id, ol_number);
@@ -196,12 +196,12 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
                     {"ol_dist_info", ol_dist_info}
                     }});
             // set Result for this order line
-            const auto& i_data = boost::any_cast<const crossbow::string&>(item.at("i_data").value());
-            const auto& s_data = boost::any_cast<const crossbow::string&>(stock.at("s_data").value());
+            const auto& i_data = item.at("i_data").value<crossbow::string>();
+            const auto& s_data = stock.at("s_data").value<crossbow::string>();
             NewOrderResult::OrderLine lineRes;
             lineRes.ol_supply_w_id = ol_supply_w_id[i];
             lineRes.ol_i_id = ol_i_id[i];
-            lineRes.i_name = boost::any_cast<crossbow::string>(item.at("i_name").value());
+            lineRes.i_name = item.at("i_name").value<crossbow::string>();
             lineRes.ol_quantity = ol_quantity;
             lineRes.s_quantity = newStock.s_quantity;
             lineRes.i_price = i_price;
@@ -216,10 +216,10 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         for (const auto& p : stocks) {
             const auto& nStock = newStocks.at(p.first);
             auto n = p.second;
-            n.at("s_quantity") = Field::create(nStock.s_quantity);
-            n.at("s_ytd") = Field::create(nStock.s_ytd);
-            n.at("s_order_cnt") = Field::create(nStock.s_order_cnt);
-            n.at("s_remote_cnt") = Field::create(nStock.s_remote_cnt);
+            n.at("s_quantity") = Field(nStock.s_quantity);
+            n.at("s_ytd") = Field(nStock.s_ytd);
+            n.at("s_order_cnt") = Field(nStock.s_order_cnt);
+            n.at("s_remote_cnt") = Field(nStock.s_remote_cnt);
             tx.update(sTable, p.first.key(), p.second, n);
         }
         // 1% of transactions need to abort
@@ -232,11 +232,11 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             // write single-line results
             result.o_id = o_id;
             result.o_ol_cnt = o_ol_cnt;
-            result.c_last = boost::any_cast<crossbow::string>(customer.at("c_last").value());
-            result.c_credit = boost::any_cast<crossbow::string>(customer.at("c_credit").value());
-            result.c_discount = boost::any_cast<int32_t>(customer.at("c_discount").value());
-            result.w_tax = boost::any_cast<int32_t>(warehouse.at("w_tax").value());
-            result.d_tax = boost::any_cast<int32_t>(district.at("d_tax").value());
+            result.c_last = customer.at("c_last").value<crossbow::string>();
+            result.c_credit = customer.at("c_credit").value<crossbow::string>();
+            result.c_discount = customer.at("c_discount").value<int32_t>();
+            result.w_tax = warehouse.at("w_tax").value<int32_t>();
+            result.d_tax = district.at("d_tax").value<int32_t>();
             result.o_entry_d = datetime;
             result.total_amount = ol_amount_sum * (1 - result.c_discount) * (1 + result.w_tax + result.d_tax);
             tx.commit();

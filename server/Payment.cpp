@@ -47,7 +47,7 @@ Future<Tuple> Transactions::getCustomer(Transaction& tx,
         std::vector<tell::db::key_t> keys;
         for (; !iter.done(); iter.next()) {
             auto k = iter.key();
-            if (boost::any_cast<const crossbow::string&>(k[0].value()) != c_last) {
+            if (boost::any_cast<const crossbow::string&>(k[2].value()) != c_last) {
                 break;
             }
             keys.push_back(iter.value());

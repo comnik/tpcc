@@ -57,6 +57,7 @@ int main(int argc, const char** argv) {
     std::string outFile("out.csv");
     size_t numClients = 1;
     unsigned time = 5*60;
+    bool exit = false;
     auto opts = create_options("tpcc_server",
             value<'h'>("help", &help, tag::description{"print help"})
             , value<'H'>("host", &host, tag::description{"Comma-separated list of hosts"})
@@ -66,6 +67,7 @@ int main(int argc, const char** argv) {
             , value<'W'>("num-warehouses", &numWarehouses, tag::description{"Number of warehouses"})
             , value<'t'>("time", &time, tag::description{"Duration of the benchmark in seconds"})
             , value<'o'>("out", &outFile, tag::description{"Path to the output file"})
+            , value<-1>("exit", &exit, tag::description{"Quit server"})
             );
     try {
         parse(opts, argc, argv);
@@ -122,6 +124,18 @@ int main(int argc, const char** argv) {
             LOG_INFO("Starting client at %1%", dateString);
         }
 
+        if (exit) {
+            for (auto& client : clients) {
+                auto& cmds = client.commands();
+                cmds.execute<tpcc::Command::EXIT>([](const err_code& ec){
+                    if (ec) {
+                        std::cerr << "ERROR: " << ec.message() << std::endl;
+                    }
+                });
+                goto END;
+            }
+        }
+
         if (populate) {
             auto& cmds = clients[0].commands();
             cmds.execute<tpcc::Command::CREATE_SCHEMA>(
@@ -158,6 +172,7 @@ int main(int argc, const char** argv) {
                 client.run();
             }
         }
+END:
         service.run();
         LOG_INFO("Done, writing results");
         std::ofstream out(outFile.c_str());
@@ -191,9 +206,12 @@ int main(int argc, const char** argv) {
                 case tpcc::Command::PAYMENT:
                     tName = "Payment";
                     break;
+                case tpcc::Command::EXIT:
+                    assert(false);
+                    break;
                 }
-                out << std::chrono::duration_cast<std::chrono::seconds>(e.start - startTime).count() << ','
-                    << std::chrono::duration_cast<std::chrono::seconds>(e.end - startTime).count() << ','
+                out << std::chrono::duration_cast<std::chrono::milliseconds>(e.start - startTime).count() << ','
+                    << std::chrono::duration_cast<std::chrono::milliseconds>(e.end - startTime).count() << ','
                     << tName << ','
                     << (e.success ? "true" : "false") << ','
                     << e.error << std::endl;

@@ -200,8 +200,8 @@ END:
                     assert(false);
                     break;
                 }
-                out << std::chrono::duration_cast<std::chrono::seconds>(e.start - startTime).count() << ','
-                    << std::chrono::duration_cast<std::chrono::seconds>(e.end - startTime).count() << ','
+                out << std::chrono::duration_cast<std::chrono::milliseconds>(e.start - startTime).count() << ','
+                    << std::chrono::duration_cast<std::chrono::milliseconds>(e.end - startTime).count() << ','
                     << tName << ','
                     << (e.success ? "true" : "false") << ','
                     << e.error << std::endl;

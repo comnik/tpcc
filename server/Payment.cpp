@@ -39,9 +39,9 @@ Future<Tuple> Transactions::getCustomer(Transaction& tx,
     if (selectByLastName) {
         auto iter = tx.lower_bound(customerTable, "c_last_idx",
                 std::vector<Field>({
-                    Field::create(c_last)
-                    , Field::create(c_w_id)
+                    Field::create(c_w_id)
                     , Field::create(c_d_id)
+                    , Field::create(c_last)
                     , Field::create("")
                     }));
         std::vector<tell::db::key_t> keys;

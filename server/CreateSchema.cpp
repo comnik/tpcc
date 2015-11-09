@@ -93,9 +93,9 @@ void createCustomer(db::Transaction& transaction) {
     schema.addField(store::FieldType::TEXT, "c_data", true);
     schema.addIndex("c_last_idx",
             std::make_pair(false, std::vector<tell::store::Schema::id_t>{
-                schema.idOf("c_last")
-                , schema.idOf("c_w_id")
+                schema.idOf("c_w_id")
                 , schema.idOf("c_d_id")
+                , schema.idOf("c_last")
                 , schema.idOf("c_first")
                 }));
     transaction.createTable("customer", schema);

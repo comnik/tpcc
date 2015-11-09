@@ -33,14 +33,15 @@ Future<Tuple> Transactions::getCustomer(Transaction& tx,
         const crossbow::string& c_last,
         int16_t c_w_id,
         int16_t c_d_id,
+        int32_t c_id,
         table_t customerTable,
         CustomerKey& customerKey) {
     if (selectByLastName) {
         auto iter = tx.lower_bound(customerTable, "c_last_idx",
                 std::vector<Field>({
-                    Field(c_last)
-                    , Field(c_w_id)
+                    Field(c_w_id)
                     , Field(c_d_id)
+                    , Field(c_last)
                     , Field("")
                     }));
         std::vector<tell::db::key_t> keys;
@@ -60,7 +61,6 @@ Future<Tuple> Transactions::getCustomer(Transaction& tx,
         pos = pos % 2 == 0 ? (pos / 2) : (pos / 2 + 1);
         customerKey = CustomerKey{keys.at(pos - 1)};
     } else {
-        auto c_id = rnd.NURand<int32_t>(1023,1,3000);
         customerKey = CustomerKey{c_w_id, c_d_id, c_id};
     }
     return tx.get(customerTable, customerKey.key());
@@ -79,7 +79,7 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
         auto cTable = cTableF.get();
         CustomerKey customerKey(0, 0, 0);
         auto customerF = getCustomer(tx, in.selectByLastName, in.c_last,
-               in.c_w_id, in.c_d_id, cTable, customerKey);
+               in.c_w_id, in.c_d_id, in.c_id, cTable, customerKey);
         DistrictKey dKey{in.w_id, in.d_id};
         auto districtF = tx.get(dTable, dKey.key());
         tell::db::key_t warehouseKey{uint64_t(in.w_id)};

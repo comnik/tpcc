@@ -513,6 +513,8 @@ private:
                     [this](const error_code& ec, size_t bytes_written) {
                         if (ec) {
                             std::cerr << ec.message() << std::endl;
+                            mSocket.close();
+                            delete this;
                             return;
                         }
                         read(0);
@@ -540,6 +542,12 @@ private:
         }
         mSocket.async_read_some(boost::asio::buffer(mBuffer.get() + bytes_read, mBufSize - bytes_read),
                 [this, bytes_read](const error_code& ec, size_t br){
+                    if (ec) {
+                        std::cerr << ec.message() << std::endl;
+                        mSocket.close();
+                        delete this;
+                        return;
+                    }
                     read(bytes_read + br);
                 });
     }

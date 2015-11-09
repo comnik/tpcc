@@ -44,7 +44,7 @@ private:
             bool selectByLastName,
             const crossbow::string& c_last,
             int16_t c_w_id,
-            int16_t c_d_id,
+            int16_t c_d_id, int32_t c_id,
             tell::db::table_t customerTable,
             CustomerKey& customerKey);
 };

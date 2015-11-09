@@ -115,6 +115,15 @@ int main(int argc, const char** argv) {
                 boost::asio::connect(clients[i*numClients + j].socket(), iter);
             }
         }
+
+        {
+            auto t = std::time(nullptr);
+            std::string dateString(20, '\0');
+            auto len = std::strftime(&dateString.front(), 20, "%T", std::localtime(&t));
+            dateString.resize(len);
+            LOG_INFO("Starting client at %1%", dateString);
+        }
+
         if (exit) {
             for (auto& client : clients) {
                 auto& cmds = client.commands();
@@ -126,6 +135,7 @@ int main(int argc, const char** argv) {
                 goto END;
             }
         }
+
         if (populate) {
             auto& cmds = clients[0].commands();
             cmds.execute<tpcc::Command::CREATE_SCHEMA>(

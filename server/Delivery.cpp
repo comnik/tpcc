@@ -41,9 +41,9 @@ DeliveryResult Transactions::delivery(Transaction& tx, const DeliveryIn& in) {
         auto ol_delivery_d = now();
         for (int16_t d_id = 1; d_id <= 10; ++d_id) {
             auto iter = tx.lower_bound(noTable, "new-order-idx", {
-                    Field::create(in.w_id),
-                    Field::create(d_id),
-                    Field::create(int32_t(0))});
+                    Field(in.w_id),
+                    Field(d_id),
+                    Field(int32_t(0))});
             if (iter.done()) continue;
             NewOrderKey noKey{iter.value()};
             if (noKey.w_id != in.w_id || noKey.d_id != d_id) continue;
@@ -55,9 +55,9 @@ DeliveryResult Transactions::delivery(Transaction& tx, const DeliveryIn& in) {
 
             auto newOrder = newOrderF.get();
             tx.remove(noTable, noKey.key(), newOrder);
-            nOrder.at("o_carrier_id") = Field::create(in.o_carrier_id);
+            nOrder.at("o_carrier_id") = Field(in.o_carrier_id);
             tx.update(oTable, oKey.key(), order, nOrder);
-            auto o_ol_cnt = boost::any_cast<int16_t>(order.at("o_ol_cnt").value());
+            auto o_ol_cnt = order.at("o_ol_cnt").value<int16_t>();
             std::vector<Future<Tuple>> orderLinesF;
             orderLinesF.reserve(o_ol_cnt);
             std::vector<tell::db::key_t> ol_keys;
@@ -68,20 +68,20 @@ DeliveryResult Transactions::delivery(Transaction& tx, const DeliveryIn& in) {
                 orderLinesF.emplace_back(tx.get(olTable, k));
                 ol_keys.emplace_back(k);
             }
-            CustomerKey cKey{in.w_id, d_id, boost::any_cast<int32_t>(order.at("o_c_id").value())};
+            CustomerKey cKey{in.w_id, d_id, order.at("o_c_id").value<int32_t>()};
             auto customerF = tx.get(cTable, cKey.key());
             auto customer = customerF.get();
             int64_t amount = 0;
             for (size_t i = orderLinesF.size(); i > 0; --i) {
                 auto orderline = orderLinesF[i - 1].get();
                 auto nOrderline = orderline;
-                amount += boost::any_cast<int32_t>(orderline.at("ol_amount").value());
-                nOrderline.at("ol_delivery_d") = Field::create(ol_delivery_d);
+                amount += orderline.at("ol_amount").value<int32_t>();
+                nOrderline.at("ol_delivery_d") = Field(ol_delivery_d);
                 tx.update(olTable, ol_keys[i - 1], orderline, nOrderline);
             }
             auto nCustomer = customer;
-            nCustomer.at("c_balance") += Field::create(amount);
-            nCustomer.at("c_delivery_cnt") += Field::create(int16_t(1));
+            nCustomer.at("c_balance") += Field(amount);
+            nCustomer.at("c_delivery_cnt") += Field(int16_t(1));
             tx.update(cTable, cKey.key(), customer, nCustomer);
         }
         tx.commit();

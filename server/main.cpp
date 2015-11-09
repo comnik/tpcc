@@ -56,6 +56,7 @@ int main(int argc, const char** argv) {
     std::string logLevel("DEBUG");
     crossbow::string commitManager;
     crossbow::string storageNodes;
+    tell::store::ClientConfig config;
     int16_t numWarehouses = 0;
     auto opts = create_options("tpcc_server",
             value<'h'>("help", &help, tag::description{"print help"}),
@@ -64,7 +65,8 @@ int main(int argc, const char** argv) {
             value<'l'>("log-level", &logLevel, tag::description{"The log level"}),
             value<'c'>("commit-manager", &commitManager, tag::description{"Address to the commit manager"}),
             value<'s'>("storage-nodes", &storageNodes, tag::description{"Semicolon-separated list of storage node addresses"}),
-            value<'W'>("num-warehouses", &numWarehouses, tag::description{"Number of warehouses"})
+            value<'W'>("num-warehouses", &numWarehouses, tag::description{"Number of warehouses"}),
+            value<-1>("network-threads", &config.numNetworkThreads, tag::ignore_short<true>{})
             );
     try {
         parse(opts, argc, argv);
@@ -85,7 +87,6 @@ int main(int argc, const char** argv) {
     crossbow::allocator::init();
 
     crossbow::logger::logger->config.level = crossbow::logger::logLevelFromString(logLevel);
-    tell::store::ClientConfig config;
     config.commitManager = config.parseCommitManager(commitManager);
     config.tellStore = config.parseTellStore(storageNodes);
     tell::db::ClientManager<void> clientManager(config);

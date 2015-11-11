@@ -106,9 +106,9 @@ int main(int argc, const char** argv) {
             ip::tcp::resolver resolver(service);
             ip::tcp::resolver::iterator iter;
             if (host == "") {
-                iter = resolver.resolve(ip::tcp::resolver::query(port));
+                iter = resolver.resolve(ip::tcp::resolver::query(p));
             } else {
-                iter = resolver.resolve(ip::tcp::resolver::query(addr[0], port));
+                iter = resolver.resolve(ip::tcp::resolver::query(addr[0], p));
             }
             for (unsigned j = 0; j < numClients; ++j) {
                 LOG_INFO("Connected to client " + crossbow::to_string(i*numClients + j));

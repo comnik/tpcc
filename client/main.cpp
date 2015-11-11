@@ -36,7 +36,7 @@ using namespace crossbow::program_options;
 using namespace boost::asio;
 using err_code = boost::system::error_code;
 
-std::vector<std::string> split(const std::string str, const char delim) {
+std::vector<std::string> split(const std::string& str, const char delim) {
     std::stringstream ss(str);
     std::string item;
     std::vector<std::string> result;
@@ -51,7 +51,7 @@ int main(int argc, const char** argv) {
     bool help = false;
     bool populate = false;
     int16_t numWarehouses = 1;
-    std::string host;
+    crossbow::string host;
     std::string port("8713");
     std::string logLevel("DEBUG");
     std::string outFile("out.csv");
@@ -88,7 +88,7 @@ int main(int argc, const char** argv) {
     auto endTime = startTime + std::chrono::seconds(time);
     crossbow::logger::logger->config.level = crossbow::logger::logLevelFromString(logLevel);
     try {
-        auto hosts = split(host, ',');
+        auto hosts = split(host.c_str(), ',');
         io_service service;
         auto sumClients = hosts.size() * numClients;
         std::vector<tpcc::Client> clients;
@@ -108,7 +108,7 @@ int main(int argc, const char** argv) {
             if (host == "") {
                 iter = resolver.resolve(ip::tcp::resolver::query(port));
             } else {
-                iter = resolver.resolve(ip::tcp::resolver::query(host, port));
+                iter = resolver.resolve(ip::tcp::resolver::query(h, port));
             }
             for (unsigned j = 0; j < numClients; ++j) {
                 LOG_INFO("Connected to client " + crossbow::to_string(i*numClients + j));

@@ -41,8 +41,8 @@ void createWarehouse(db::Transaction& transaction) {
     schema.addField(store::FieldType::TEXT, "w_city", true);
     schema.addField(store::FieldType::TEXT, "w_state", true);
     schema.addField(store::FieldType::TEXT, "w_zip", true);
-    schema.addField(store::FieldType::INT, "w_tax", true);
-    schema.addField(store::FieldType::BIGINT, "w_ytd", true);
+    schema.addField(store::FieldType::INT, "w_tax", true);          //numeric (4,4)
+    schema.addField(store::FieldType::BIGINT, "w_ytd", true);       //numeric (12,2)
     transaction.createTable("warehouse", schema);
 }
 
@@ -58,8 +58,8 @@ void createDistrict(db::Transaction& transaction) {
     schema.addField(store::FieldType::TEXT, "d_city", true);
     schema.addField(store::FieldType::TEXT, "d_state", true);
     schema.addField(store::FieldType::TEXT, "d_zip", true);
-    schema.addField(store::FieldType::INT, "d_tax", true);
-    schema.addField(store::FieldType::BIGINT, "d_ytd", true);
+    schema.addField(store::FieldType::INT, "d_tax", true);          //numeric (4,4)
+    schema.addField(store::FieldType::BIGINT, "d_ytd", true);       //numeric (12,2)
     schema.addField(store::FieldType::INT, "d_next_o_id", true);
     transaction.createTable("district", schema);
 }
@@ -84,10 +84,10 @@ void createCustomer(db::Transaction& transaction) {
     schema.addField(store::FieldType::TEXT, "c_phone", true);
     schema.addField(store::FieldType::BIGINT, "c_since", true);
     schema.addField(store::FieldType::TEXT, "c_credit", true);
-    schema.addField(store::FieldType::BIGINT, "c_credit_lim", true);
-    schema.addField(store::FieldType::INT, "c_discount", true);
-    schema.addField(store::FieldType::BIGINT, "c_balance", true);
-    schema.addField(store::FieldType::BIGINT, "c_ytd_payment", true);
+    schema.addField(store::FieldType::BIGINT, "c_credit_lim", true);    //numeric (12,2)
+    schema.addField(store::FieldType::INT, "c_discount", true);         //numeric (4,4)
+    schema.addField(store::FieldType::BIGINT, "c_balance", true);       //numeric (12,2)
+    schema.addField(store::FieldType::BIGINT, "c_ytd_payment", true);   //numeric (12,2)
     schema.addField(store::FieldType::SMALLINT, "c_payment_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "c_delivery_cnt", true);
     schema.addField(store::FieldType::TEXT, "c_data", true);
@@ -110,8 +110,8 @@ void createHistory(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "h_c_w_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_w_id", true);
-    schema.addField(store::FieldType::BIGINT, "h_date", true);
-    schema.addField(store::FieldType::INT, "h_amount", true);
+    schema.addField(store::FieldType::BIGINT, "h_date", true);          //datetime
+    schema.addField(store::FieldType::INT, "h_amount", true);           //numeric (6,2)
     schema.addField(store::FieldType::TEXT, "h_data", true);
     transaction.createTable("history", schema);
 }
@@ -140,7 +140,7 @@ void createOrder(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "o_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "o_w_id", true);
     schema.addField(store::FieldType::INT, "o_c_id", true);
-    schema.addField(store::FieldType::BIGINT, "o_entry_d", true);
+    schema.addField(store::FieldType::BIGINT, "o_entry_d", true);           //datetime
     schema.addField(store::FieldType::SMALLINT, "o_carrier_id", false);
     schema.addField(store::FieldType::SMALLINT, "o_ol_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "o_all_local", true);
@@ -164,9 +164,9 @@ void createOrderLine(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "ol_number", true);
     schema.addField(store::FieldType::INT, "ol_i_id", true);
     schema.addField(store::FieldType::SMALLINT, "ol_supply_w_id", true);
-    schema.addField(store::FieldType::BIGINT, "ol_delivery_d", false);
+    schema.addField(store::FieldType::BIGINT, "ol_delivery_d", false);      //datetime
     schema.addField(store::FieldType::SMALLINT, "ol_quantity", true);
-    schema.addField(store::FieldType::INT, "ol_amount", true);
+    schema.addField(store::FieldType::INT, "ol_amount", true);              //numeric (6,2)
     schema.addField(store::FieldType::TEXT, "ol_dist_info", true);
     transaction.createTable("order-line", schema);
 }
@@ -207,9 +207,44 @@ void createStock(db::Transaction& transaction) {
     transaction.createTable("stock", schema);
 }
 
+void createRegion(db::Transaction& transaction) {
+    // Primary key: (r_regionkey)
+    //              ( 2 b )
+    store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
+    schema.addField(store::FieldType::SMALLINT, "r_regionkey", true);
+    schema.addField(store::FieldType::TEXT, "r_name", true);
+    schema.addField(store::FieldType::TEXT, "r_comment", true);
+    transaction.createTable("region", schema);
+}
+
+void createNation(db::Transaction& transaction) {
+    // Primary key: (r_nationkey)
+    //              ( 2 b )
+    store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
+    schema.addField(store::FieldType::SMALLINT, "n_nationkey", true);
+    schema.addField(store::FieldType::TEXT, "n_name", true);
+    schema.addField(store::FieldType::SMALLINT, "n_regionkey", true);
+    schema.addField(store::FieldType::TEXT, "n_comment", true);
+    transaction.createTable("nation", schema);
+}
+
+void createSupplier(db::Transaction& transaction) {
+    // Primary key: (su_suppkey)
+    //              ( 2 b )
+    store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
+    schema.addField(store::FieldType::SMALLINT, "su_suppkey", true);
+    schema.addField(store::FieldType::TEXT, "su_name", true);
+    schema.addField(store::FieldType::TEXT, "su_address", true);
+    schema.addField(store::FieldType::SMALLINT, "su_nationkey", true);
+    schema.addField(store::FieldType::TEXT, "su_phone", true);
+    schema.addField(store::FieldType::BIGINT, "su_acctbal", true);  //numeric (12,2)
+    schema.addField(store::FieldType::TEXT, "su_comment", true);
+    transaction.createTable("supplier", schema);
+}
+
 } // anonymouse namespace
 
-void createSchema(tell::db::Transaction& transaction) {
+void createSchema(tell::db::Transaction& transaction, bool useCH) {
     createWarehouse(transaction);
     createDistrict(transaction);
     createCustomer(transaction);
@@ -219,6 +254,11 @@ void createSchema(tell::db::Transaction& transaction) {
     createOrderLine(transaction);
     createItem(transaction);
     createStock(transaction);
+    if (useCH) {
+        createRegion(transaction);
+        createNation(transaction);
+        createSupplier(transaction);
+    }
 }
 
 } // namespace tpcc

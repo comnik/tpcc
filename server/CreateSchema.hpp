@@ -36,7 +36,7 @@ class Transaction;
 
 namespace tpcc {
 
-void createSchema(tell::db::Transaction& transaction);
+void createSchema(tell::db::Transaction& transaction, bool useCH);
 
 struct WarehouseKey {
     int16_t w_id;

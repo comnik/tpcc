@@ -61,12 +61,12 @@ public:
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::CREATE_SCHEMA, void>::type
-    execute(const Callback& callback) {
-        auto transaction = [this, callback](tell::db::Transaction& tx){
+    execute(bool args, const Callback& callback) {
+        auto transaction = [this, args, callback](tell::db::Transaction& tx){
             bool success;
             crossbow::string msg;
             try {
-                createSchema(tx);
+                createSchema(tx, args);
                 tx.commit();
                 success = true;
             } catch (std::exception& ex) {

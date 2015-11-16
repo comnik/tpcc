@@ -50,6 +50,7 @@ std::vector<std::string> split(const std::string& str, const char delim) {
 int main(int argc, const char** argv) {
     bool help = false;
     bool populate = false;
+    bool useCHTables = false;
     int16_t numWarehouses = 1;
     crossbow::string host;
     std::string port("8713");
@@ -68,6 +69,8 @@ int main(int argc, const char** argv) {
             , value<'t'>("time", &time, tag::description{"Duration of the benchmark in seconds"})
             , value<'o'>("out", &outFile, tag::description{"Path to the output file"})
             , value<-1>("exit", &exit, tag::description{"Quit server"})
+            , value<'a'>("ch-bench-analytics", &useCHTables,
+                         tag::description{"Populate the database witht he additional tables used in the CHBenchmark"})
             );
     try {
         parse(opts, argc, argv);
@@ -139,7 +142,7 @@ int main(int argc, const char** argv) {
         if (populate) {
             auto& cmds = clients[0].commands();
             cmds.execute<tpcc::Command::CREATE_SCHEMA>(
-                    [&clients](const err_code& ec,
+                    [&clients, &useCHTables](const err_code& ec,
                         const std::tuple<bool, crossbow::string>& res){
                 if (ec) {
                     LOG_ERROR(ec.message());
@@ -165,7 +168,7 @@ int main(int argc, const char** argv) {
                         client.populate();
                     }
                 });
-            });
+            }, useCHTables);
         } else {
             for (decltype(clients.size()) i = 0; i < clients.size(); ++i) {
                 auto& client = clients[i];

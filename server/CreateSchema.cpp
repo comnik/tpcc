@@ -64,7 +64,7 @@ void createDistrict(db::Transaction& transaction) {
     transaction.createTable("district", schema);
 }
 
-void createCustomer(db::Transaction& transaction) {
+void createCustomer(db::Transaction& transaction,  bool useCH) {
     // Primary key: (c_w_id, c_d_id, c_id)
     // c_w_id: 2 bytes
     // c_d_id: 1 byte
@@ -91,6 +91,8 @@ void createCustomer(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "c_payment_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "c_delivery_cnt", true);
     schema.addField(store::FieldType::TEXT, "c_data", true);
+    if (useCH)
+        schema.addField(store::FieldType::SMALLINT, "c_n_nationkey", true);
     schema.addIndex("c_last_idx",
             std::make_pair(false, std::vector<tell::store::Schema::id_t>{
                 schema.idOf("c_w_id")
@@ -183,7 +185,7 @@ void createItem(db::Transaction& transaction) {
     transaction.createTable("item", schema);
 }
 
-void createStock(db::Transaction& transaction) {
+void createStock(db::Transaction& transaction, bool useCH) {
     // Primary key: (s_w_id, s_i_id)
     //              ( 2 b  , 4 b   )
     store::Schema schema(store::TableType::TRANSACTIONAL);
@@ -204,6 +206,8 @@ void createStock(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "s_order_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "s_remote_cnt", true);
     schema.addField(store::FieldType::TEXT, "s_data", true);
+    if (useCH)
+        schema.addField(store::FieldType::SMALLINT, "s_su_suppkey", true);
     transaction.createTable("stock", schema);
 }
 
@@ -247,13 +251,13 @@ void createSupplier(db::Transaction& transaction) {
 void createSchema(tell::db::Transaction& transaction, bool useCH) {
     createWarehouse(transaction);
     createDistrict(transaction);
-    createCustomer(transaction);
+    createCustomer(transaction, useCH);
     createHistory(transaction);
     createNewOrder(transaction);
     createOrder(transaction);
     createOrderLine(transaction);
     createItem(transaction);
-    createStock(transaction);
+    createStock(transaction, useCH);
     if (useCH) {
         createRegion(transaction);
         createNation(transaction);

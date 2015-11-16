@@ -85,14 +85,14 @@ public:
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::POPULATE_WAREHOUSE, void>::type
-    execute(int16_t args, const Callback& callback) {
+    execute(std::tuple<int16_t, bool> args, const Callback& callback) {
         auto transaction = [this, args, callback](tell::db::Transaction& tx) {
             bool success;
             crossbow::string msg;
             try {
                 auto counter = tx.getCounter("history_counter");
                 Populator populator;
-                populator.populateWarehouse(tx, counter, args);
+                populator.populateWarehouse(tx, counter, std::get<0>(args), std::get<1>(args));
                 tx.commit();
                 success = true;
             } catch (std::exception& ex) {
@@ -110,14 +110,14 @@ public:
     }
 
     template<Command C, class Callback>
-    typename std::enable_if<C == Command::POPULATE_ITEMS, void>::type
-    execute(const Callback& callback) {
-        auto transaction = [this, callback](tell::db::Transaction& tx) {
+    typename std::enable_if<C == Command::POPULATE_DIM_TABLES, void>::type
+    execute(bool args, const Callback& callback) {
+        auto transaction = [this, args, callback](tell::db::Transaction& tx) {
             bool success;
             crossbow::string msg;
             try {
                 Populator populator;
-                populator.populateItems(tx);
+                populator.populateDimTables(tx, args);
                 tx.commit();
                 success = true;
             } catch (std::exception& ex) {

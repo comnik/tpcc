@@ -74,11 +74,10 @@ public:
         return mCmds;
     }
     void run();
-    void populate();
-    void populateItems();
+    void populate(bool useCH);
     const std::deque<LogEntry>& log() const { return mLog; }
 private:
-    void populate(int16_t lower, int16_t upper);
+    void populate(int16_t lower, int16_t upper, bool useCH);
     template<Command C>
     void execute(const typename Signature<C>::arguments& arg);
 };

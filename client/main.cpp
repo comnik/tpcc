@@ -30,22 +30,13 @@
 #include <cassert>
 #include <fstream>
 
+#include <common/Util.hpp>
+
 #include "Client.hpp"
 
 using namespace crossbow::program_options;
 using namespace boost::asio;
 using err_code = boost::system::error_code;
-
-std::vector<std::string> split(const std::string& str, const char delim) {
-    std::stringstream ss(str);
-    std::string item;
-    std::vector<std::string> result;
-    while (std::getline(ss, item, delim)) {
-        if (item.empty()) continue;
-        result.push_back(std::move(item));
-    }
-    return result;
-}
 
 int main(int argc, const char** argv) {
     bool help = false;
@@ -91,7 +82,7 @@ int main(int argc, const char** argv) {
     auto endTime = startTime + std::chrono::seconds(time);
     crossbow::logger::logger->config.level = crossbow::logger::logLevelFromString(logLevel);
     try {
-        auto hosts = split(host.c_str(), ',');
+        auto hosts = tpcc::split(host.c_str(), ',');
         io_service service;
         auto sumClients = hosts.size() * numClients;
         std::vector<tpcc::Client> clients;
@@ -103,7 +94,7 @@ int main(int argc, const char** argv) {
         }
         for (size_t i = 0; i < hosts.size(); ++i) {
             auto h = hosts[i];
-            auto addr = split(h, ':');
+            auto addr = tpcc::split(h, ':');
             assert(addr.size() <= 2);
             auto p = addr.size() == 2 ? addr[1] : port;
             ip::tcp::resolver resolver(service);
@@ -154,7 +145,7 @@ int main(int argc, const char** argv) {
                 }
 
                 auto& cmds = clients[0].commands();
-                cmds.execute<tpcc::Command::POPULATE_ITEMS>([&clients](const err_code& ec, const std::tuple<bool, crossbow::string>& res){
+                cmds.execute<tpcc::Command::POPULATE_DIM_TABLES>([&clients, &useCHTables](const err_code& ec, const std::tuple<bool, crossbow::string>& res){
                     if (ec) {
                         LOG_ERROR(ec.message());
                         return;
@@ -165,9 +156,9 @@ int main(int argc, const char** argv) {
                     }
 
                     for (auto& client : clients) {
-                        client.populate();
+                        client.populate(useCHTables);
                     }
-                });
+                }, useCHTables);
             }, useCHTables);
         } else {
             for (decltype(clients.size()) i = 0; i < clients.size(); ++i) {
@@ -188,7 +179,7 @@ END:
                 case tpcc::Command::POPULATE_WAREHOUSE:
                     tName = "Populate";
                     break;
-                case tpcc::Command::POPULATE_ITEMS:
+                case tpcc::Command::POPULATE_DIM_TABLES:
                     tName = "Populate";
                     break;
                 case tpcc::Command::CREATE_SCHEMA:

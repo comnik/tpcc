@@ -58,7 +58,7 @@
 
 namespace tpcc {
 
-#define COMMANDS (POPULATE_ITEMS, POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS, DELIVERY, STOCK_LEVEL, EXIT)
+#define COMMANDS (POPULATE_DIM_TABLES, POPULATE_WAREHOUSE, CREATE_SCHEMA, NEW_ORDER, PAYMENT, ORDER_STATUS, DELIVERY, STOCK_LEVEL, EXIT)
 
 GEN_COMMANDS(Command, COMMANDS);
 
@@ -75,13 +75,13 @@ struct Signature;
 template<>
 struct Signature<Command::POPULATE_WAREHOUSE> {
     using result = std::tuple<bool, crossbow::string>;
-    using arguments = int16_t;
+    using arguments = std::tuple<int16_t, bool>;    //warehouse-id, 0/1: whether or not to populate with CH-Tables
 };
 
 template<>
-struct Signature<Command::POPULATE_ITEMS> {
+struct Signature<Command::POPULATE_DIM_TABLES> {
     using result = std::tuple<bool, crossbow::string>;
-    using arguments = void;
+    using arguments = bool;  // 0: normal TPCC (items table), 1: CHBenchmark (including Suppliers, region, and nation tables)
 };
 
 template<>

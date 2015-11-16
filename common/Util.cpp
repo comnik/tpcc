@@ -30,6 +30,18 @@ template class singleton<tpcc::Random_t, create_static<tpcc::Random_t>, default_
 
 namespace tpcc {
 
+// splitting strings
+std::vector<std::string> split(const std::string& str, const char delim) {
+    std::stringstream ss(str);
+    std::string item;
+    std::vector<std::string> result;
+    while (std::getline(ss, item, delim)) {
+        if (item.empty()) continue;
+        result.push_back(std::move(item));
+    }
+    return result;
+}
+
 Random_t::Random_t() {}
 
 namespace {

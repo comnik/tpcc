@@ -23,6 +23,11 @@
 #pragma once
 #include <random>
 #include <cstdint>
+#include <string>
+#include <iostream>
+#include <sstream>
+#include <fstream>
+#include <vector>
 #include <crossbow/singleton.hpp>
 #include <crossbow/string.hpp>
 
@@ -46,6 +51,9 @@ struct equal_to<std::pair<int16_t, int16_t>> {
 }
 
 namespace tpcc {
+
+// splitting strings
+extern std::vector<std::string> split(const std::string& str, const char delim);
 
 // Stuff for generating random input
 class Random_t {

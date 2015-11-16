@@ -117,22 +117,11 @@ void Client::run() {
                                                        : (mCurrWarehouse + 1);
 }
 
-void Client::populate() { populate(mWareHouseLower, mWareHouseUpper); }
+void Client::populate(bool useCH) { populate(mWareHouseLower, mWareHouseUpper, useCH); }
 
-void Client::populateItems() {
-    mCmds.execute<Command::POPULATE_ITEMS>(
-      [](const err_code &ec, const std::tuple<bool, crossbow::string> &err) {
-          if (ec) {
-            std::cerr << ec.message() << std::endl;
-            return;
-          }
-          LOG_ASSERT(std::get<0>(err), std::get<1>(err));
-      });
-}
-
-void Client::populate(int16_t lower, int16_t upper) {
+void Client::populate(int16_t lower, int16_t upper, bool useCH) {
     mCmds.execute<Command::POPULATE_WAREHOUSE>(
-      [this, lower, upper](const err_code &ec,
+      [this, lower, upper, useCH](const err_code &ec,
                            const std::tuple<bool, crossbow::string> &res) {
           if (ec) {
               LOG_ERROR(ec.message());
@@ -145,9 +134,9 @@ void Client::populate(int16_t lower, int16_t upper) {
               mSocket.close();
               return; // population done
           }
-          populate(lower + 1, upper);
+          populate(lower + 1, upper, useCH);
       },
-      lower);
+      std::make_tuple(lower, useCH));
 }
 
 } // namespace tpcc

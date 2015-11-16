@@ -42,12 +42,16 @@ class Populator {
     crossbow::string mOriginal = "ORIGINAL";
 public:
     Populator() : mRandom(*Random()) {}
-    void populateItems(tell::db::Transaction& transaction);
-    void populateWarehouse(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id);
+    void populateDimTables(tell::db::Transaction& transaction, bool useCH);
+    void populateWarehouse(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id, bool useCH);
 private:
-    void populateStocks(tell::db::Transaction& transaction, int16_t w_id);
-    void populateDistricts(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id);
-    void populateCustomers(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id, int16_t d_id, int64_t c_since);
+    void populateItems(tell::db::Transaction& transaction);
+    void populateRegions(tell::db::Transaction& transaction);
+    void populateNations(tell::db::Transaction& transaction);
+    void populateSuppliers(tell::db::Transaction &transaction);
+    void populateStocks(tell::db::Transaction& transaction, int16_t w_id, bool useCH);
+    void populateDistricts(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id, bool useCH);
+    void populateCustomers(tell::db::Transaction& transaction, tell::db::Counter& counter, int16_t w_id, int16_t d_id, int64_t c_since, bool useCH);
     void populateHistory(tell::db::Transaction& transaction, tell::db::Counter& counter, int32_t c_id, int16_t d_id, int16_t w_id, int64_t n);
     void populateOrders(tell::db::Transaction& transaction, int16_t d_id, int16_t w_id, int64_t o_entry_d);
     void populateOrderLines(tell::db::Transaction& transaction,

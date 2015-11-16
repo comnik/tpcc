@@ -30,6 +30,35 @@ using namespace tell::db;
 
 namespace tpcc {
 
+void Populator::populateDimTables(Transaction &transaction, bool useCH)
+{
+    populateItems(transaction);
+    if (useCH) {
+        populateRegions(transaction);
+        populateNations(transaction);
+        populateSuppliers(transaction);
+    }
+}
+
+void Populator::populateWarehouse(tell::db::Transaction &transaction,
+                                  Counter &counter, int16_t w_id, bool useCH) {
+    auto tIdFuture = transaction.openTable("warehouse");
+    auto table = tIdFuture.get();
+    tell::db::key_t key{uint64_t(w_id)};
+    transaction.insert(table, key,
+                       {{{"w_id", w_id},
+                         {"w_name", mRandom.astring(6, 10)},
+                         {"w_street_1", mRandom.astring(10, 20)},
+                         {"w_street_2", mRandom.astring(10, 20)},
+                         {"w_city", mRandom.astring(10, 20)},
+                         {"w_state", mRandom.astring(10, 20)},
+                         {"w_zip", mRandom.astring(2, 2)},
+                         {"w_tax", mRandom.random<int32_t>(0, 2000)},
+                         {"w_ytd", int64_t(30000000)}}});
+    populateStocks(transaction, w_id, useCH);
+    populateDistricts(transaction, counter, w_id, useCH);
+}
+
 void Populator::populateItems(tell::db::Transaction &transaction) {
     auto tIdFuture = transaction.openTable("item");
     auto tId = tIdFuture.get();
@@ -44,27 +73,81 @@ void Populator::populateItems(tell::db::Transaction &transaction) {
     }
 }
 
-void Populator::populateWarehouse(tell::db::Transaction &transaction,
-                                  Counter &counter, int16_t w_id) {
-    auto tIdFuture = transaction.openTable("warehouse");
-    auto table = tIdFuture.get();
-    tell::db::key_t key{uint64_t(w_id)};
-    transaction.insert(table, key,
-                       {{{"w_id", w_id},
-                         {"w_name", mRandom.astring(6, 10)},
-                         {"w_street_1", mRandom.astring(10, 20)},
-                         {"w_street_2", mRandom.astring(10, 20)},
-                         {"w_city", mRandom.astring(10, 20)},
-                         {"w_state", mRandom.astring(10, 20)},
-                         {"w_zip", mRandom.astring(2, 2)},
-                         {"w_tax", mRandom.random<int32_t>(0, 2000)},
-                         {"w_ytd", int64_t(30000000)}}});
-    populateStocks(transaction, w_id);
-    populateDistricts(transaction, counter, w_id);
+void Populator::populateRegions(Transaction &transaction)
+{
+    auto tIdFuture   = transaction.openTable("region");
+    auto table       = tIdFuture.get();
+    std::string line;
+    std::ifstream infile("ch-tables/region.tbl");
+    while (std::getline(infile, line)) {
+        auto items = tpcc::split(line, '|');
+        if (items.size() != 3) {
+            LOG_ERROR("region file must contain of 3-tuples!");
+            return;
+        }
+        int16_t intKey = static_cast<int16_t>(std::stoi(items[0]));
+        tell::db::key_t key = tell::db::key_t{static_cast<uint64_t>(intKey)};
+        transaction.insert(table, key, {{
+            {"r_regionkey", intKey},
+            {"r_name", crossbow::string(items[1])},
+            {"r_comment", crossbow::string(items[2])}
+        }});
+    }
+}
+
+void Populator::populateNations(Transaction &transaction)
+{
+    auto tIdFuture   = transaction.openTable("nation");
+    auto table       = tIdFuture.get();
+    std::string line;
+    std::ifstream infile("ch-tables/nation.tbl");
+    while (std::getline(infile, line)) {
+        auto items = tpcc::split(line, '|');
+        if (items.size() != 4) {
+            LOG_ERROR("nation file must contain of 4-tuples!");
+            return;
+        }
+        int16_t intKey = static_cast<int16_t>(std::stoi(items[0]));
+        tell::db::key_t key = tell::db::key_t{static_cast<uint64_t>(intKey)};
+        transaction.insert(table, key, {{
+            {"n_nationkey", intKey},
+            {"n_name", crossbow::string(items[1])},
+            {"n_regionkey", static_cast<int16_t>(std::stoi(items[2]))},
+            {"n_comment", crossbow::string(items[3])}
+        }});
+    }
+}
+
+void Populator::populateSuppliers(Transaction &transaction)
+{
+    auto tIdFuture   = transaction.openTable("supplier");
+    auto table       = tIdFuture.get();
+    std::string line;
+    std::ifstream infile("ch-tables/supplier.tbl");
+    while (std::getline(infile, line)) {
+        auto items = tpcc::split(line, '|');
+        if (items.size() != 7) {
+            LOG_ERROR("supplier file must contain of 7-tuples!");
+            return;
+        }
+        int16_t intKey = static_cast<int16_t>(std::stoi(items[0]));
+        tell::db::key_t key = tell::db::key_t{static_cast<uint64_t>(intKey)};
+        std::string acctbal = items[5];
+        acctbal.erase(acctbal.find("."), 1);
+        transaction.insert(table, key, {{
+            {"su_suppkey", intKey},
+            {"su_name", crossbow::string(items[1])},
+            {"su_address", crossbow::string(items[2])},
+            {"su_nationkey", static_cast<int16_t>(std::stoi(items[3]))},
+            {"su_phone", crossbow::string(items[4])},
+            {"su_acctbal", static_cast<int64_t>(std::stoll(acctbal))},
+            {"su_comment", crossbow::string(items[6])}
+        }});
+    }
 }
 
 void Populator::populateStocks(tell::db::Transaction &transaction,
-                               int16_t w_id) {
+                               int16_t w_id, bool useCH) {
     auto tIdFuture   = transaction.openTable("stock");
     auto table       = tIdFuture.get();
     uint64_t keyBase = uint64_t(w_id);
@@ -80,29 +163,35 @@ void Populator::populateStocks(tell::db::Transaction &transaction,
             auto iter = s_data.begin() + dist(mRandom.randomDevice());
             s_data.insert(iter, mOriginal.begin(), mOriginal.end());
         }
+
+        std::unordered_map<crossbow::string, Field> tuple =
+        {{{"s_i_id", s_i_id},
+        {"s_w_id", w_id},
+        {"s_quantity", int(mRandom.randomWithin(10, 100))},
+        {"s_dist_01", mRandom.astring(24, 24)},
+        {"s_dist_02", mRandom.astring(24, 24)},
+        {"s_dist_03", mRandom.astring(24, 24)},
+        {"s_dist_04", mRandom.astring(24, 24)},
+        {"s_dist_05", mRandom.astring(24, 24)},
+        {"s_dist_06", mRandom.astring(24, 24)},
+        {"s_dist_07", mRandom.astring(24, 24)},
+        {"s_dist_08", mRandom.astring(24, 24)},
+        {"s_dist_09", mRandom.astring(24, 24)},
+        {"s_dist_10", mRandom.astring(24, 24)},
+        {"s_ytd", int(0)},
+        {"s_order_cnt", int16_t(0)},
+        {"s_remote_cnt", int16_t(0)},
+        {"s_data", std::move(s_data)}}};
+        if (useCH)
+            tuple.emplace("s_su_suppkey", mRandom.randomWithin(0,99));
+
         transaction.insert(
-          table, key, {{{"s_i_id", s_i_id},
-                        {"s_w_id", w_id},
-                        {"s_quantity", int(mRandom.randomWithin(10, 100))},
-                        {"s_dist_01", mRandom.astring(24, 24)},
-                        {"s_dist_02", mRandom.astring(24, 24)},
-                        {"s_dist_03", mRandom.astring(24, 24)},
-                        {"s_dist_04", mRandom.astring(24, 24)},
-                        {"s_dist_05", mRandom.astring(24, 24)},
-                        {"s_dist_06", mRandom.astring(24, 24)},
-                        {"s_dist_07", mRandom.astring(24, 24)},
-                        {"s_dist_08", mRandom.astring(24, 24)},
-                        {"s_dist_09", mRandom.astring(24, 24)},
-                        {"s_dist_10", mRandom.astring(24, 24)},
-                        {"s_ytd", int(0)},
-                        {"s_order_cnt", int16_t(0)},
-                        {"s_remote_cnt", int16_t(0)},
-                        {"s_data", std::move(s_data)}}});
+          table, key, tuple);
     }
 }
 
 void Populator::populateDistricts(tell::db::Transaction &transaction,
-                                  Counter &counter, int16_t w_id) {
+                                  Counter &counter, int16_t w_id, bool useCH) {
     auto tIdFuture   = transaction.openTable("district");
     auto table       = tIdFuture.get();
     uint64_t keyBase = w_id;
@@ -122,7 +211,7 @@ void Populator::populateDistricts(tell::db::Transaction &transaction,
                              {"d_tax", int(mRandom.randomWithin(0, 2000))},
                              {"d_ytd", int64_t(3000000)},
                              {"d_next_o_id", int(3001)}}});
-        populateCustomers(transaction, counter, w_id, i, n);
+        populateCustomers(transaction, counter, w_id, i, n, useCH);
         populateOrders(transaction, i, w_id, n);
         populateNewOrders(transaction, w_id, i);
     }
@@ -130,7 +219,7 @@ void Populator::populateDistricts(tell::db::Transaction &transaction,
 
 void Populator::populateCustomers(tell::db::Transaction &transaction,
                                   Counter &counter, int16_t w_id, int16_t d_id,
-                                  int64_t c_since) {
+                                  int64_t c_since, bool useCH) {
     auto tIdFuture   = transaction.openTable("customer");
     auto table       = tIdFuture.get();
     uint64_t keyBase = uint64_t(w_id) << (5 * 8);
@@ -145,29 +234,34 @@ void Populator::populateCustomers(tell::db::Transaction &transaction,
         if (rNum >= 1000) {
             rNum = mRandom.NURand<int32_t>(255, 0, 999);
         }
+
+        std::unordered_map<crossbow::string, Field> tuple =
+            {{{"c_id", c_id},
+              {"c_d_id", d_id},
+              {"c_w_id", w_id},
+              {"c_first", mRandom.astring(8, 16)},
+              {"c_middle", crossbow::string("OE")},
+              {"c_last", mRandom.cLastName(rNum)},
+              {"c_street_1", mRandom.astring(10, 20)},
+              {"c_street_2", mRandom.astring(10, 20)},
+              {"c_city", mRandom.astring(10, 20)},
+              {"c_state", mRandom.astring(2, 2)},
+              {"c_zip", mRandom.zipCode()},
+              {"c_phone", mRandom.nstring(16, 16)},
+              {"c_since", c_since},
+              {"c_credit", c_credit},
+              {"c_credit_lim", int64_t(5000000)},
+              {"c_discount", int(mRandom.randomWithin(0, 50000))},
+              {"c_balance", int64_t(-1000)},
+              {"c_ytd_payment", int64_t(1000)},
+              {"c_payment_cnt", int16_t(1)},
+              {"c_delivery_cnt", int16_t(0)},
+              {"c_data", mRandom.astring(300, 500)}}};
+        if (useCH)
+            tuple.emplace("c_n_nationkey", mRandom.randomWithin(0,24));
+
         transaction.insert(
-          table, tell::db::key_t{key},
-          {{{"c_id", c_id},
-            {"c_d_id", d_id},
-            {"c_w_id", w_id},
-            {"c_first", mRandom.astring(8, 16)},
-            {"c_middle", crossbow::string("OE")},
-            {"c_last", mRandom.cLastName(rNum)},
-            {"c_street_1", mRandom.astring(10, 20)},
-            {"c_street_2", mRandom.astring(10, 20)},
-            {"c_city", mRandom.astring(10, 20)},
-            {"c_state", mRandom.astring(2, 2)},
-            {"c_zip", mRandom.zipCode()},
-            {"c_phone", mRandom.nstring(16, 16)},
-            {"c_since", c_since},
-            {"c_credit", c_credit},
-            {"c_credit_lim", int64_t(5000000)},
-            {"c_discount", int(mRandom.randomWithin(0, 50000))},
-            {"c_balance", int64_t(-1000)},
-            {"c_ytd_payment", int64_t(1000)},
-            {"c_payment_cnt", int16_t(1)},
-            {"c_delivery_cnt", int16_t(0)},
-            {"c_data", mRandom.astring(300, 500)}}});
+          table, tell::db::key_t{key}, tuple);
         populateHistory(transaction, counter, c_id, d_id, w_id, c_since);
     }
 }

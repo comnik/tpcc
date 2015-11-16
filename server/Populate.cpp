@@ -183,7 +183,7 @@ void Populator::populateStocks(tell::db::Transaction &transaction,
         {"s_remote_cnt", int16_t(0)},
         {"s_data", std::move(s_data)}}};
         if (useCH)
-            tuple.emplace("s_su_suppkey", mRandom.randomWithin(0,99));
+            tuple.emplace("s_su_suppkey", int16_t(mRandom.randomWithin(0,99)));
 
         transaction.insert(
           table, key, tuple);
@@ -258,7 +258,7 @@ void Populator::populateCustomers(tell::db::Transaction &transaction,
               {"c_delivery_cnt", int16_t(0)},
               {"c_data", mRandom.astring(300, 500)}}};
         if (useCH)
-            tuple.emplace("c_n_nationkey", mRandom.randomWithin(0,24));
+            tuple.emplace("c_n_nationkey", int16_t(mRandom.randomWithin(0,24)));
 
         transaction.insert(
           table, tell::db::key_t{key}, tuple);

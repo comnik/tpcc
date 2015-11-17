@@ -180,7 +180,7 @@ void createItem(db::Transaction& transaction) {
     schema.addField(store::FieldType::INT, "i_id", true);
     schema.addField(store::FieldType::INT, "i_im_id", true);
     schema.addField(store::FieldType::TEXT, "i_name", true);
-    schema.addField(store::FieldType::INT, "i_price", true);
+    schema.addField(store::FieldType::INT, "i_price", true);        // numeric (5,2)
     schema.addField(store::FieldType::TEXT, "i_data", true);
     transaction.createTable("item", schema);
 }

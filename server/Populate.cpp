@@ -336,6 +336,19 @@ void Populator::populateOrderLines(tell::db::Transaction &transaction,
                             ? int32_t(0)
                             : mRandom.randomWithin<int32_t>(1, 999999)},
             {"ol_dist_info", mRandom.astring(24, 24)}}});
+        // Only for debugging
+//        if (o_id <= 10) {
+//            std::cout << "ol_o_id: " << o_id
+//                        << "ol_d_id: " << d_id
+//                        << "ol_id: " << w_id
+//                        << "ol_w_id: " << w_id
+//                        << "ol_number: " << ol_number
+//                        << "ol_supply_w_id: " << w_id
+//                        << "ol_delivery_d: " << (o_id < 2101 ? o_entry_d : 0)
+//                        << "ol_quantity: " << 5
+//                        << "ol_amount: " << o_id
+//                        << std::endl;
+//        }
     }
 }
 

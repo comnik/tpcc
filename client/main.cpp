@@ -50,7 +50,7 @@ int main(int argc, const char** argv) {
     size_t numClients = 1;
     unsigned time = 5*60;
     bool exit = false;
-    auto opts = create_options("tpcc_server",
+    auto opts = create_options("tpcc_client",
             value<'h'>("help", &help, tag::description{"print help"})
             , value<'H'>("host", &host, tag::description{"Comma-separated list of hosts"})
             , value<'l'>("log-level", &logLevel, tag::description{"The log level"})

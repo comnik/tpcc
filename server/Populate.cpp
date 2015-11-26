@@ -183,7 +183,7 @@ void Populator::populateStocks(tell::db::Transaction &transaction,
         {"s_remote_cnt", int16_t(0)},
         {"s_data", std::move(s_data)}}};
         if (useCH)
-            tuple.emplace("s_su_suppkey", int16_t(mRandom.randomWithin(0,99)));
+            tuple.emplace("s_su_suppkey", int16_t(mRandom.randomWithin(1,10000)));
 
         transaction.insert(
           table, key, tuple);

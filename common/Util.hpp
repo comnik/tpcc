@@ -52,8 +52,6 @@ struct equal_to<std::pair<int16_t, int16_t>> {
 
 namespace tpcc {
 
-// splitting strings
-extern std::vector<std::string> split(const std::string& str, const char delim);
 
 // Stuff for generating random input
 class Random_t {
@@ -91,6 +89,9 @@ public:
         return (((random<Int>(0,A) | random<Int>(x,y)) + C) % (y - x + 1)) + x;
     }
 };
+
+// splitting strings
+std::vector<std::string> split(const std::string& str, const char delim);
 
 int64_t now();
 

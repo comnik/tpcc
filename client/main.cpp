@@ -90,7 +90,9 @@ int main(int argc, const char** argv) {
         auto wareHousesPerClient = numWarehouses / sumClients;
         for (decltype(sumClients) i = 0; i < sumClients; ++i) {
             if (i >= unsigned(numWarehouses)) break;
-            clients.emplace_back(service, numWarehouses, int16_t(wareHousesPerClient * i + 1), int16_t(wareHousesPerClient * (i + 1)), endTime);
+            int16_t lastWarehouse =  wareHousesPerClient * (i + 1);
+            if (i == sumClients - 1) lastWarehouse = numWarehouses;
+            clients.emplace_back(service, numWarehouses, int16_t(wareHousesPerClient * i + 1), lastWarehouse, endTime);
         }
         for (size_t i = 0; i < hosts.size(); ++i) {
             auto h = hosts[i];

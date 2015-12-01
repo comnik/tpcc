@@ -112,7 +112,7 @@ void createHistory(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "h_c_w_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_w_id", true);
-    schema.addField(store::FieldType::BIGINT, "h_date", true);          //datetime
+    schema.addField(store::FieldType::BIGINT, "h_date", true);          //datetime (nanosecs since 1970)
     schema.addField(store::FieldType::INT, "h_amount", true);           //numeric (6,2)
     schema.addField(store::FieldType::TEXT, "h_data", true);
     transaction.createTable("history", schema);
@@ -142,7 +142,7 @@ void createOrder(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "o_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "o_w_id", true);
     schema.addField(store::FieldType::INT, "o_c_id", true);
-    schema.addField(store::FieldType::BIGINT, "o_entry_d", true);           //datetime
+    schema.addField(store::FieldType::BIGINT, "o_entry_d", true);           //datetime (nanosecs since 1970)
     schema.addField(store::FieldType::SMALLINT, "o_carrier_id", false);
     schema.addField(store::FieldType::SMALLINT, "o_ol_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "o_all_local", true);
@@ -166,7 +166,7 @@ void createOrderLine(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "ol_number", true);
     schema.addField(store::FieldType::INT, "ol_i_id", true);
     schema.addField(store::FieldType::SMALLINT, "ol_supply_w_id", true);
-    schema.addField(store::FieldType::BIGINT, "ol_delivery_d", false);      //datetime
+    schema.addField(store::FieldType::BIGINT, "ol_delivery_d", false);      //datetime (nanosecs since 1970)
     schema.addField(store::FieldType::SMALLINT, "ol_quantity", true);
     schema.addField(store::FieldType::INT, "ol_amount", true);              //numeric (6,2)
     schema.addField(store::FieldType::TEXT, "ol_dist_info", true);

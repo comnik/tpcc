@@ -67,12 +67,13 @@ void Populator::populateItems(KuduSession &session) {
     assertOk(session.client()->OpenTable("item", &table));
     for (int32_t i = 1; i <= 100000; ++i) {
         auto ins = table->NewInsert();
-        assertOk(ins->mutable_row()->SetInt16("i_id", i));
+        assertOk(ins->mutable_row()->SetInt32("i_id", i));
         assertOk(ins->mutable_row()->SetInt32("i_im_id", mRandom.randomWithin<int32_t>(1, 10000)));
         assertOk(ins->mutable_row()->SetString("i_name", mRandom.astring(14, 24).c_str()));
         assertOk(ins->mutable_row()->SetInt32("i_price", mRandom.randomWithin<int32_t>(100, 10000)));
         assertOk(ins->mutable_row()->SetString("i_data", mRandom.astring(26, 50).c_str()));
         assertOk(session.Apply(ins));
+        if (i % 1000 == 0) assertOk(session.Flush());
     }
     assertOk(session.Flush());
 }
@@ -188,8 +189,9 @@ void Populator::populateStocks(KuduSession &session,
         assertOk(row->SetInt16("s_remote_cnt", int16_t(0)));
         assertOk(row->SetString("s_data", s_data.c_str()));
         if (useCH)
-            assertOk(row->SetInt16("", mRandom.randomWithin<int16_t>(1, 10000)));
+            assertOk(row->SetInt16("s_su_suppkey", mRandom.randomWithin<int16_t>(1, 10000)));
         assertOk(session.Apply(ins));
+        if (s_i_id % 1000 == 0) assertOk(session.Flush());
     }
     assertOk(session.Flush());
 }
@@ -289,7 +291,8 @@ void Populator::populateHistory(KuduSession &session,
     assertOk(session.client()->OpenTable("history", &table));
     auto ins = table->NewInsert();
     auto row = ins->mutable_row();
-    assertOk(row->SetInt16("h_c_id", c_id));
+    assertOk(row->SetInt64("h_ts", std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count()));
+    assertOk(row->SetInt32("h_c_id", c_id));
     assertOk(row->SetInt16("h_c_d_id", d_id));
     assertOk(row->SetInt16("h_c_w_id", w_id));
     assertOk(row->SetInt16("h_d_id", d_id));
@@ -317,7 +320,7 @@ void Populator::populateOrders(KuduSession &session, int16_t d_id,
            assertOk(row->SetInt16("o_d_id", d_id));
            assertOk(row->SetInt16("o_w_id", w_id));
            assertOk(row->SetInt32("o_c_id", c_ids[o_id - 1]));
-           assertOk(row->SetInt16("o_entry_d", o_entry_d));
+           assertOk(row->SetInt64("o_entry_d", o_entry_d));
            assertOk(row->SetNull("o_carrier_id"));
            assertOk(row->SetInt16("o_ol_cnt", o_ol_cnt));
            assertOk(row->SetInt16("o_all_local", int16_t(1)));
@@ -327,7 +330,7 @@ void Populator::populateOrders(KuduSession &session, int16_t d_id,
         assertOk(session.Apply(ins));
         {
             std::tr1::shared_ptr<KuduTable> table;
-            assertOk(table->client()->OpenTable("order_idx", &table));
+            assertOk(session.client()->OpenTable("order_idx", &table));
             auto ins = table->NewInsert();
             auto row = ins->mutable_row();
             assertOk(row->SetInt16("o_w_id", w_id));

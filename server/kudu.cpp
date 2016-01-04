@@ -52,11 +52,14 @@ class Connection {
     Session mSession;
     Populator mPopulator;
 public:
-    Connection(boost::asio::io_service& service, const Session session, int16_t numWarehouses)
+    Connection(boost::asio::io_service& service, kudu::client::KuduClient& client, int16_t numWarehouses)
         : mSocket(service)
         , mServer(*this, mSocket)
-        , mSession(session)
-    {}
+        , mSession(client.NewSession())
+    {
+        assertOk(mSession->SetFlushMode(kudu::client::KuduSession::MANUAL_FLUSH));
+        mSession->SetTimeoutMillis(60000);
+    }
     ~Connection() = default;
     decltype(mSocket)& socket() { return mSocket; }
     void run() {
@@ -118,9 +121,8 @@ public:
 };
 
 void accept(io_service& service, ip::tcp::acceptor& a, kudu::client::KuduClient& client, int16_t numWarehouses) {
-    auto session = client.NewSession();
-    auto conn = new Connection(service, session, numWarehouses);
-    a.async_accept(conn->socket(), [&, numWarehouses](const boost::system::error_code& err) {
+    auto conn = new Connection(service, client, numWarehouses);
+    a.async_accept(conn->socket(), [&, conn, numWarehouses](const boost::system::error_code& err) {
         if (err) {
             delete conn;
             LOG_ERROR(err.message());

@@ -179,6 +179,7 @@ void createHistory(KuduSession& session) {
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
+    addField(schemaBuilder, FieldType::BIGINT, "h_ts", true);
     addField(schemaBuilder, FieldType::INT, "h_c_id", true);
     addField(schemaBuilder, FieldType::SMALLINT, "h_c_d_id", true);
     addField(schemaBuilder, FieldType::SMALLINT, "h_c_w_id", true);
@@ -187,6 +188,7 @@ void createHistory(KuduSession& session) {
     addField(schemaBuilder, FieldType::BIGINT, "h_date", true);          //datetime (nanosecs since 1970)
     addField(schemaBuilder, FieldType::INT, "h_amount", true);           //numeric (6,2)
     addField(schemaBuilder, FieldType::TEXT, "h_data", true);
+    schemaBuilder.SetPrimaryKey({"h_ts", "h_c_id", "h_c_d_id", "h_c_w_id"});
 
     kudu::client::KuduSchema schema;
     assertOk(schemaBuilder.Build(&schema));
@@ -390,6 +392,7 @@ void createSupplier(KuduSession& session) {
     addField(schemaBuilder, FieldType::TEXT, "su_phone", true);
     addField(schemaBuilder, FieldType::BIGINT, "su_acctbal", true);  //numeric (12,2)
     addField(schemaBuilder, FieldType::TEXT, "su_comment", true);
+    schemaBuilder.SetPrimaryKey({"su_suppkey"});
 
     kudu::client::KuduSchema schema;
     assertOk(schemaBuilder.Build(&schema));

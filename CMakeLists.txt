@@ -67,7 +67,9 @@ if(${USE_KUDU})
 
     set(KUDU_SERVER_SRC 
         server/kudu.cpp
-        server/CreateSchemaKudu.cpp)
+        server/CreateSchemaKudu.cpp
+        server/PopulateKudu.cpp
+        server/TransactionsKudu.cpp)
 
     add_executable(tpcc_kudu ${KUDU_SERVER_SRC} ${KUDU_INTERFACE_SRC})
     target_include_directories(tpcc_kudu PRIVATE ${KUDU_CLIENT_INCLUDE_DIR})

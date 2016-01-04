@@ -31,6 +31,7 @@
 #include <common/Protocol.hpp>
 #include "kudu.hpp"
 #include "CreateSchemaKudu.hpp"
+#include "PopulateKudu.hpp"
 
 using namespace crossbow::program_options;
 using namespace boost::asio;
@@ -45,12 +46,11 @@ void assertOk(kudu::Status status) {
 
 using Session = std::tr1::shared_ptr<kudu::client::KuduSession>;
 
-class CommandImpl;
-
 class Connection {
     boost::asio::ip::tcp::socket mSocket;
     server::Server<Connection> mServer;
     Session mSession;
+    Populator mPopulator;
 public:
     Connection(boost::asio::io_service& service, const Session session, int16_t numWarehouses)
         : mSocket(service)
@@ -73,17 +73,22 @@ public:
     template<Command C, class Callback>
     typename std::enable_if<C == Command::CREATE_SCHEMA, void>::type
     execute(bool args, const Callback& callback) {
-        createSchema(*mSession, false);
+        createSchema(*mSession, args);
+        callback(std::make_tuple(true, crossbow::string()));
     }
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::POPULATE_WAREHOUSE, void>::type
     execute(std::tuple<int16_t, bool> args, const Callback& callback) {
+        mPopulator.populateWarehouse(*mSession, std::get<0>(args), std::get<1>(args));
+        callback(std::make_tuple(true, crossbow::string()));
     }
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::POPULATE_DIM_TABLES, void>::type
     execute(bool args, const Callback& callback) {
+        mPopulator.populateDimTables(*mSession, args);
+        callback(std::make_tuple(true, crossbow::string()));
     }
 
     template<Command C, class Callback>

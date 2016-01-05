@@ -112,13 +112,13 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
                 }});
         // generate random items
         std::vector<int32_t> ol_i_id;
+        ol_i_id.reserve(o_ol_cnt);
         for (int16_t i = 0; i < o_ol_cnt; ++i) {
             auto i_id = rnd->NURand<int32_t>(8191,1,100000);
             ol_i_id.push_back(i_id);
         }
         // get the items
         // get the stocks
-        ol_i_id.reserve(o_ol_cnt);
         std::unordered_map<ItemKey, Future<Tuple>> itemsF;
         std::unordered_map<ItemKey, Tuple> items;
         std::unordered_map<StockKey, Future<Tuple>> stocksF;

@@ -115,6 +115,7 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
                 if (c_data.size() > 500) {
                     c_data.resize(500);
                 }
+                nCustomer.at("c_data") = c_data;
             }
         }
         tx.update(cTable, customerKey.key(), customer, nCustomer);

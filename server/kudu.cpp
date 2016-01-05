@@ -32,6 +32,7 @@
 #include "kudu.hpp"
 #include "CreateSchemaKudu.hpp"
 #include "PopulateKudu.hpp"
+#include "TransactionsKudu.hpp"
 
 using namespace crossbow::program_options;
 using namespace boost::asio;
@@ -51,11 +52,13 @@ class Connection {
     server::Server<Connection> mServer;
     Session mSession;
     Populator mPopulator;
+    Transactions mTxs;
 public:
     Connection(boost::asio::io_service& service, kudu::client::KuduClient& client, int16_t numWarehouses)
         : mSocket(service)
         , mServer(*this, mSocket)
         , mSession(client.NewSession())
+        , mTxs(numWarehouses)
     {
         assertOk(mSession->SetFlushMode(kudu::client::KuduSession::MANUAL_FLUSH));
         mSession->SetTimeoutMillis(60000);
@@ -97,26 +100,31 @@ public:
     template<Command C, class Callback>
     typename std::enable_if<C == Command::NEW_ORDER, void>::type
     execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        callback(mTxs.newOrderTransaction(*mSession, args));
     }
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::PAYMENT, void>::type
     execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        callback(mTxs.payment(*mSession, args));
     }
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::ORDER_STATUS, void>::type
     execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        callback(mTxs.orderStatus(*mSession, args));
     }
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::DELIVERY, void>::type
     execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        callback(mTxs.delivery(*mSession, args));
     }
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::STOCK_LEVEL, void>::type
     execute(const typename Signature<C>::arguments& args, const Callback& callback) {
+        callback(mTxs.stockLevel(*mSession, args));
     }
 };
 

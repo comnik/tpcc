@@ -239,6 +239,42 @@ void Populator::populateCustomers(KuduSession &session,
         }
 
         std::string c_last = mRandom.cLastName(rNum).c_str();
+#ifndef NDEBUG
+        // Check whether last name makes sense
+        for (auto c : c_last) {
+            switch (c) {
+            case 'A':
+            case 'B':
+            case 'C':
+            case 'D':
+            case 'E':
+            case 'F':
+            case 'G':
+            case 'H':
+            case 'I':
+            case 'J':
+            case 'K':
+            case 'L':
+            case 'M':
+            case 'N':
+            case 'O':
+            case 'P':
+            case 'Q':
+            case 'R':
+            case 'S':
+            case 'T':
+            case 'U':
+            case 'V':
+            case 'W':
+            case 'X':
+            case 'Y':
+            case 'Z':
+                break;
+            default:
+                assert(false);
+            }
+        }
+#endif
         std::string c_first = mRandom.astring(8, 16).c_str();
         auto ins = table->NewInsert();
         auto row = ins->mutable_row();
@@ -280,6 +316,7 @@ void Populator::populateCustomers(KuduSession &session,
             assertOk(session.Apply(ins));
         }
         populateHistory(session, c_id, d_id, w_id, c_since);
+        assertOk(session.Flush());
     }
     assertOk(session.Flush());
 }

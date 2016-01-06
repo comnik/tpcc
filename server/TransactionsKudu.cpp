@@ -243,14 +243,17 @@ NewOrderResult Transactions::newOrderTransaction(KuduSession& session, const New
     }
     int32_t ol_amount_sum = 0;
     // insert the order lines
+    std::vector<std::string> strings;
     for (int16_t i = 0; i < o_ol_cnt; ++i) {
         int16_t ol_number = i + 1;
         //ItemKey itemId(ol_i_id[i]);
         auto& item = items.at(ol_i_id[i]);
         auto stockId = std::make_tuple(ol_supply_w_id[i], ol_i_id[i]);
         auto& stock = stocks.at(stockId);
-        kudu::Slice ol_dist_info;
-        assertOk(stock.GetString(ol_dist_info_key, &ol_dist_info));
+        kudu::Slice ol_dist_info_slice;
+        assertOk(stock.GetString(ol_dist_info_key, &ol_dist_info_slice));
+        strings.emplace_back(ol_dist_info_slice.ToString());
+        auto& ol_dist_info = strings.back();
         auto ol_quantity = rnd.randomWithin<int16_t>(1, 10);
         auto& newStock = newStocks.at(stockId);
         if (newStock.s_quantity > ol_quantity + 10) {
@@ -379,7 +382,7 @@ KuduRowResult getCustomer(KuduSession& session,
                 auto& key = keys.back();
                 assertOk(row.GetInt16("c_w_id", &key.c_w_id));
                 assertOk(row.GetInt16("c_d_id", &key.c_d_id));
-                assertOk(row.GetInt32("c_w_id", &key.c_id));
+                assertOk(row.GetInt32("c_id", &key.c_id));
             }
         }
         if (keys.empty()) {
@@ -389,7 +392,7 @@ KuduRowResult getCustomer(KuduSession& session,
         }
         auto pos = keys.size();
         pos = pos % 2 == 0 ? (pos / 2) : (pos / 2 + 1);
-        customerKey = CustomerKey{keys.at(pos - 1)};
+        customerKey = keys.at(pos - 1);
     } else {
         customerKey = CustomerKey{c_w_id, c_d_id, c_id};
     }
@@ -470,6 +473,7 @@ OrderStatusResult Transactions::orderStatus(KuduSession& session, const OrderSta
 PaymentResult Transactions::payment(KuduSession& session, const PaymentIn& in) {
     PaymentResult result;
     result.success = true;
+    std::vector<std::string> strings;
     try {
         std::tr1::shared_ptr<KuduTable> hTable;
         std::tr1::shared_ptr<KuduTable> dTable;
@@ -536,7 +540,8 @@ PaymentResult Transactions::payment(KuduSession& session, const PaymentIn& in) {
                     "," + std::to_string(in.h_amount);
                 Slice c_data_str;
                 assertOk(customer.GetString("c_data", &c_data_str));
-                auto c_data = c_data_str.ToString();
+                strings.emplace_back(c_data_str.ToString());
+                auto& c_data = strings.back();
                 c_data.insert(0, histInfo);
                 if (c_data.size() > 500) {
                     c_data.resize(500);
@@ -549,7 +554,8 @@ PaymentResult Transactions::payment(KuduSession& session, const PaymentIn& in) {
         Slice w_name, d_name;
         assertOk(warehouse.GetString("w_name", &w_name));
         assertOk(district.GetString("d_name", &d_name));
-        std::string h_data = w_name.ToString() + d_name.ToString();
+        strings.emplace_back(w_name.ToString() + d_name.ToString());
+        auto& h_data = strings.back();
         std::unique_ptr<KuduInsert> ins(hTable->NewInsert());
 
         set(*ins, "h_ts", int64_t(std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count()));
@@ -575,6 +581,14 @@ PaymentResult Transactions::payment(KuduSession& session, const PaymentIn& in) {
     return result;
 }
 
+template<class F, class L>
+void measureOpen(KuduScanner& scanner, F file, L line) {
+    auto begin = std::chrono::system_clock::now();
+    scanner.Open();
+    auto time = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now() - begin).count();
+    std::cout << "Scan open took " << time << " ms (" << file << ":" << line << ")\n";
+}
+
 DeliveryResult Transactions::delivery(KuduSession& session, const DeliveryIn& in) {
     DeliveryResult result;
     try {
@@ -596,74 +610,71 @@ DeliveryResult Transactions::delivery(KuduSession& session, const DeliveryIn& in
             auto& scanner = *scanners.back();
             addPredicates(*noTable, scanner, "no_w_id", in.w_id, "no_d_id", d_id);
             scanner.Open();
-            while (scanner.HasMoreRows()) {
-                scanner.NextBatch(&rows);
-                for (auto& newOrder : rows) {
-                    ScannerList localScanners;
-                    int32_t no_o_id;
-                    assertOk(newOrder.GetInt32("no_o_id", &no_o_id));
+            assert(scanner.HasMoreRows());
+            scanner.NextBatch(&rows);
+            auto& newOrder = rows[0];
+            ScannerList localScanners;
+            int32_t no_o_id;
+            assertOk(newOrder.GetInt32("no_o_id", &no_o_id));
 
-                    std::unique_ptr<KuduDelete> del(noTable->NewDelete());
-                    set(*del, "no_w_id", in.w_id);
-                    set(*del, "no_d_id", d_id);
-                    set(*del, "no_o_id", no_o_id);
-                    operations.emplace_back(del.release());
+            std::unique_ptr<KuduDelete> del(noTable->NewDelete());
+            set(*del, "no_w_id", in.w_id);
+            set(*del, "no_d_id", d_id);
+            set(*del, "no_o_id", no_o_id);
+            operations.emplace_back(del.release());
 
-                    int32_t c_id;
-                    auto order = get(*oTable, localScanners, "o_w_id", in.w_id, "o_d_id", d_id, "o_id", no_o_id);
-                    assertOk(order.GetInt32("o_c_id", &c_id));
-                    std::unique_ptr<KuduUpdate> upd(oTable->NewUpdate());
-                    set(*upd, "o_w_id", in.w_id);
-                    set(*upd, "o_d_id", d_id);
-                    set(*upd, "o_id", no_o_id);
-                    set(*upd, "o_carrier_id", in.o_carrier_id);
-                    operations.emplace_back(upd.release());
+            int32_t c_id;
+            auto order = get(*oTable, localScanners, "o_w_id", in.w_id, "o_d_id", d_id, "o_id", no_o_id);
+            assertOk(order.GetInt32("o_c_id", &c_id));
+            std::unique_ptr<KuduUpdate> upd(oTable->NewUpdate());
+            set(*upd, "o_w_id", in.w_id);
+            set(*upd, "o_d_id", d_id);
+            set(*upd, "o_id", no_o_id);
+            set(*upd, "o_carrier_id", in.o_carrier_id);
+            operations.emplace_back(upd.release());
 
-                    int16_t o_ol_cnt;
-                    assertOk(order.GetInt16("o_ol_cnt", &o_ol_cnt));
-                    localScanners.emplace_back(new KuduScanner(olTable.get()));
-                    auto& olScanner = localScanners.back();
-                    addPredicates(*olTable, *olScanner, "ol_w_id", in.w_id, "ol_d_id", d_id, "ol_o_id", no_o_id);
-                    olScanner->Open();
-                    std::vector<KuduRowResult> ols;
-                    int64_t amount = 0;
-                    while (olScanner->HasMoreRows()) {
-                        olScanner->NextBatch(&ols);
-                        for (auto& ol : ols) {
-                            int16_t ol_number;
-                            int32_t ol_amount;
-                            assertOk(ol.GetInt16("ol_number", &ol_number));
-                            assertOk(ol.GetInt32("ol_amount", &ol_amount));
-                            amount += ol_amount;
+            int16_t o_ol_cnt;
+            assertOk(order.GetInt16("o_ol_cnt", &o_ol_cnt));
+            localScanners.emplace_back(new KuduScanner(olTable.get()));
+            auto& olScanner = localScanners.back();
+            addPredicates(*olTable, *olScanner, "ol_w_id", in.w_id, "ol_d_id", d_id, "ol_o_id", no_o_id);
+            olScanner->Open();
+            std::vector<KuduRowResult> ols;
+            int64_t amount = 0;
+            while (olScanner->HasMoreRows()) {
+                olScanner->NextBatch(&ols);
+                for (auto& ol : ols) {
+                    int16_t ol_number;
+                    int32_t ol_amount;
+                    assertOk(ol.GetInt16("ol_number", &ol_number));
+                    assertOk(ol.GetInt32("ol_amount", &ol_amount));
+                    amount += ol_amount;
 
-                            upd.reset(olTable->NewUpdate());
-                            set(*upd, "ol_w_id", in.w_id);
-                            set(*upd, "ol_d_id", d_id);
-                            set(*upd, "ol_o_id", no_o_id);
-                            set(*upd, "ol_number", ol_number);
-                            set(*upd, "ol_delivery_d", ol_delivery_d);
-                            operations.emplace_back(upd.release());
-                        }
-                    }
-
-                    auto customer = get(*cTable, localScanners, "c_w_id", in.w_id, "c_d_id", d_id, "c_id", c_id);
-                    int64_t c_balance;
-                    int16_t c_delivery_cnt;
-                    assertOk(customer.GetInt64("c_balance", &c_balance));
-                    assertOk(customer.GetInt16("c_delivery_cnt", &c_delivery_cnt));
-                    c_balance += amount;
-                    c_delivery_cnt += 1;
-
-                    upd.reset(cTable->NewUpdate());
-                    set(*upd, "c_w_id", in.w_id);
-                    set(*upd, "c_d_id", d_id);
-                    set(*upd, "c_id", c_id);
-                    set(*upd, "c_balance", c_balance);
-                    set(*upd, "c_delivery_cnt", c_delivery_cnt);
+                    upd.reset(olTable->NewUpdate());
+                    set(*upd, "ol_w_id", in.w_id);
+                    set(*upd, "ol_d_id", d_id);
+                    set(*upd, "ol_o_id", no_o_id);
+                    set(*upd, "ol_number", ol_number);
+                    set(*upd, "ol_delivery_d", ol_delivery_d);
                     operations.emplace_back(upd.release());
                 }
             }
 
+            auto customer = get(*cTable, localScanners, "c_w_id", in.w_id, "c_d_id", d_id, "c_id", c_id);
+            int64_t c_balance;
+            int16_t c_delivery_cnt;
+            assertOk(customer.GetInt64("c_balance", &c_balance));
+            assertOk(customer.GetInt16("c_delivery_cnt", &c_delivery_cnt));
+            c_balance += amount;
+            c_delivery_cnt += 1;
+
+            upd.reset(cTable->NewUpdate());
+            set(*upd, "c_w_id", in.w_id);
+            set(*upd, "c_d_id", d_id);
+            set(*upd, "c_id", c_id);
+            set(*upd, "c_balance", c_balance);
+            set(*upd, "c_delivery_cnt", c_delivery_cnt);
+            operations.emplace_back(upd.release());
         }
         if (result.success) {
             for (auto& op : operations) {

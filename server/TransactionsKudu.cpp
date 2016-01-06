@@ -679,6 +679,7 @@ DeliveryResult Transactions::delivery(KuduSession& session, const DeliveryIn& in
 
 StockLevelResult Transactions::stockLevel(KuduSession& session, const StockLevelIn& in) {
     StockLevelResult result;
+    result.low_stock = 0;
     try {
         std::tr1::shared_ptr<KuduTable> sTable;
         std::tr1::shared_ptr<KuduTable> olTable;
@@ -694,42 +695,38 @@ StockLevelResult Transactions::stockLevel(KuduSession& session, const StockLevel
         auto district = get(*dTable, scanners, "d_w_id", in.w_id, "d_id", in.d_id);
         int32_t d_next_o_id;
         assertOk(district.GetInt32("d_next_o_id", &d_next_o_id));
-        OrderKey oKey{in.w_id, in.d_id, 0};
-        // get the 20 newest orders - this is not required in the benchmark,
-        // but it allows us to not use an index
-        std::vector<std::pair<int32_t, Future<Tuple>>> ordersF;
-        ordersF.reserve(20);
-        for (decltype(d_next_o_id) ol_o_id = d_next_o_id - 20; ol_o_id < d_next_o_id; ++ol_o_id) {
-            oKey.o_id = ol_o_id;
-            ordersF.emplace_back(ol_o_id, tx.get(oTable, oKey.key()));
-        }
-        // get the order-lines
-        std::vector<Future<Tuple>> orderlinesF;
-        OrderlineKey olKey{in.w_id, in.d_id, 0, 0};
-        for (auto& orderF : ordersF) {
-            olKey.o_id = orderF.first;
-            auto order = orderF.second.get();
-            auto o_ol_cnt = order.at("o_ol_cnt").value<int16_t>();
-            for (decltype(o_ol_cnt) ol_number = 1; ol_number <= o_ol_cnt; ++ol_number) {
-                olKey.ol_number = ol_number;
-                orderlinesF.emplace_back(tx.get(olTable, olKey.key()));
-            }
-        }
-        result.low_stock = 0;
+
+        scanners.emplace_back(new KuduScanner(olTable.get()));
+        auto& olScanner = scanners.back();
+        addPredicates(*olTable, *olScanner, "ol_w_id", in.w_id, "ol_d_id", in.d_id);
+        assertOk(olScanner->AddConjunctPredicate(olTable->NewComparisonPredicate("ol_o_id", KuduPredicate::GREATER_EQUAL, KuduValue::FromInt(d_next_o_id - 20))));
+        olScanner->Open();
+
         // count low_stock
-        std::unordered_map<int32_t, Future<Tuple>> stocksF;
-        for (auto& olF : orderlinesF) {
-            auto ol = olF.get();
-            auto ol_i_id = ol.at("ol_i_id").value<int32_t>();
-            if (stocksF.count(ol_i_id) == 0) {
-                stocksF.emplace(ol_i_id, tx.get(sTable, tell::db::key_t{(uint64_t(in.w_id) << 4*8) | uint64_t(ol_i_id)}));
+        result.low_stock = 0;
+        std::vector<KuduRowResult> rows;
+        std::unique_ptr<KuduScanner> scanner;
+        while (olScanner->HasMoreRows()) {
+            olScanner->NextBatch(&rows);
+            for (auto& row : rows) {
+                int32_t ol_i_id;
+                assertOk(row.GetInt32("ol_i_id", &ol_i_id));
+                scanner.reset(new KuduScanner(sTable.get()));
+                addPredicates(*sTable, *scanner, "s_w_id", in.w_id, "s_i_id", ol_i_id);
+                scanner->Open();
+                std::vector<KuduRowResult> stocks;
+                while (scanner->HasMoreRows()) {
+                    scanner->NextBatch(&stocks);
+                    for (auto& stock : stocks) {
+                        int32_t s_quantity;
+                        assertOk(stock.GetInt32("s_quantity", &s_quantity));
+                        if (s_quantity < in.threshold) {
+                            ++result.low_stock;
+                        }
+                    }
+                }
             }
         }
-        for (auto& p : stocksF) {
-            auto stock = p.second.get();
-            result.low_stock += stock.at("s_quantity").value<int32_t>();
-        }
-        tx.commit();
         result.success = true;
         return result;
     } catch (std::exception& ex) {

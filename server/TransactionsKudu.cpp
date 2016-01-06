@@ -383,6 +383,7 @@ KuduRowResult getCustomer(KuduSession& session,
                 assertOk(row.GetInt16("c_w_id", &key.c_w_id));
                 assertOk(row.GetInt16("c_d_id", &key.c_d_id));
                 assertOk(row.GetInt32("c_id", &key.c_id));
+                assert(key.c_id > 0);
             }
         }
         if (keys.empty()) {
@@ -393,10 +394,11 @@ KuduRowResult getCustomer(KuduSession& session,
         auto pos = keys.size();
         pos = pos % 2 == 0 ? (pos / 2) : (pos / 2 + 1);
         customerKey = keys.at(pos - 1);
+        assert(customerKey.c_id > 0);
     } else {
         customerKey = CustomerKey{c_w_id, c_d_id, c_id};
     }
-    return get(*customerTable, scanners, "c_w_id", customerKey.c_w_id, "c_d_id", c_d_id, "c_id", c_id);
+    return get(*customerTable, scanners, "c_w_id", customerKey.c_w_id, "c_d_id", customerKey.c_d_id, "c_id", customerKey.c_id);
 }
 
 struct OrderKey {

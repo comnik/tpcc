@@ -42,6 +42,7 @@ namespace tpcc {
 void assertOk(kudu::Status status) {
     if (!status.ok()) {
         LOG_ERROR("ERROR from Kudu: %1%", status.message().ToString());
+        throw std::runtime_error(status.message().ToString().c_str());
     }
 }
 

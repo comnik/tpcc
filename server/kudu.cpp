@@ -69,6 +69,10 @@ public:
         mServer.run();
     }
 
+    void close() {
+        delete this;
+    }
+
     template<Command C, class Callback>
     typename std::enable_if<C == Command::EXIT, void>::type
     execute(const Callback callback) {

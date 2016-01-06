@@ -511,14 +511,15 @@ PaymentResult Transactions::payment(KuduSession& session, const PaymentIn& in) {
         int16_t c_w_id, c_d_id;
         int32_t c_id;
         {
-            int64_t c_balance, c_ytd_payment, c_payment_cnt;
+            int64_t c_balance, c_ytd_payment;
+            int16_t c_payment_cnt;
             Slice c_credit;
             assertOk(customer.GetInt16("c_w_id", &c_w_id));
             assertOk(customer.GetInt16("c_d_id", &c_d_id));
             assertOk(customer.GetInt32("c_id", &c_id));
             assertOk(customer.GetInt64("c_balance", &c_balance));
             assertOk(customer.GetInt64("c_ytd_payment", &c_ytd_payment));
-            assertOk(customer.GetInt64("c_payment_cnt", &c_payment_cnt));
+            assertOk(customer.GetInt16("c_payment_cnt", &c_payment_cnt));
             assertOk(customer.GetInt64("c_balance", &c_balance));
             assertOk(customer.GetString("c_credit", &c_credit));
 
@@ -591,8 +592,8 @@ DeliveryResult Transactions::delivery(KuduSession& session, const DeliveryIn& in
         result.success = true;
         for (int16_t d_id = 1; d_id <= 10; ++d_id) {
             ScannerList scanners;
-            auto& scanner = *scanners.back();
             scanners.emplace_back(new KuduScanner(noTable.get()));
+            auto& scanner = *scanners.back();
             addPredicates(*noTable, scanner, "no_w_id", in.w_id, "no_d_id", d_id);
             scanner.Open();
             while (scanner.HasMoreRows()) {

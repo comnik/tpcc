@@ -32,17 +32,20 @@ using namespace boost::asio;
 namespace tpcc {
 
 class CommandImpl {
+    Connection* mConnection;
     server::Server<CommandImpl> mServer;
     boost::asio::io_service& mService;
     tell::db::ClientManager<void>& mClientManager;
     std::unique_ptr<tell::db::TransactionFiber<void>> mFiber;
     Transactions mTransactions;
 public:
-    CommandImpl(boost::asio::ip::tcp::socket& socket,
+    CommandImpl(Connection* connection,
+            boost::asio::ip::tcp::socket& socket,
             boost::asio::io_service& service,
             tell::db::ClientManager<void>& clientManager,
             int16_t numWarehouses)
-        : mServer(*this, socket)
+        : mConnection(connection)
+        , mServer(*this, socket)
         , mService(service)
         , mClientManager(clientManager)
         , mTransactions(numWarehouses)
@@ -50,6 +53,10 @@ public:
 
     void run() {
         mServer.run();
+    }
+
+    void close() {
+        delete mConnection;
     }
 
     template<Command C, class Callback>
@@ -208,7 +215,7 @@ public:
 
 Connection::Connection(boost::asio::io_service& service, tell::db::ClientManager<void>& clientManager, int16_t numWarehouses)
     : mSocket(service)
-    , mImpl(new CommandImpl(mSocket, service, clientManager, numWarehouses))
+    , mImpl(new CommandImpl(this, mSocket, service, clientManager, numWarehouses))
 {}
 
 Connection::~Connection() = default;

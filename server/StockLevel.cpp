@@ -76,7 +76,10 @@ StockLevelResult Transactions::stockLevel(Transaction& tx, const StockLevelIn& i
         }
         for (auto& p : stocksF) {
             auto stock = p.second.get();
-            result.low_stock += stock.at("s_quantity").value<int32_t>();
+            auto quantity = stock.at("s_quantity").value<int32_t>();
+            if (quantity < in.threshold) {
+                ++result.low_stock;
+            }
         }
         tx.commit();
         result.success = true;

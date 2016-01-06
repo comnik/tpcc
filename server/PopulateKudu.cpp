@@ -147,7 +147,7 @@ void Populator::populateSuppliers(KuduSession &session)
         assertOk(row->SetString("su_address", items[2]));
         assertOk(row->SetInt16("su_nationkey", static_cast<int16_t>(std::stoi(items[3]))));
         assertOk(row->SetString("su_phone", items[4]));
-        assertOk(row->SetInt16("su_acctbal", static_cast<int64_t>(std::stoll(acctbal))));
+        assertOk(row->SetInt64("su_acctbal", static_cast<int64_t>(std::stoll(acctbal))));
         assertOk(row->SetString("su_comment", items[6]));
         assertOk(session.Apply(ins));
     }

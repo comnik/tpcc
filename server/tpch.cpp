@@ -28,6 +28,7 @@
 
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time.hpp>
+
 #include <kudu/client/client.h>
 #include <telldb/Transaction.hpp>
 #include <telldb/TellDB.hpp>
@@ -733,6 +734,26 @@ struct Populate {
 template struct Populate<Transaction>;
 template struct Populate<KuduSession>;
 
+bool file_readable(const std::string& fileName) {
+    std::ifstream in(fileName.c_str());
+    return in.good();
+}
+
+template<class Fun>
+void getFiles(const std::string& baseDir, const std::string& tableName, Fun fun) {
+    int part = 1;
+    auto fName = baseDir + "/" + tableName + ".tbl";
+    if (file_readable(fName)) {
+        fun(fName);
+    }
+    while (true) {
+        auto filename = fName + "." + std::to_string(part);
+        if (!file_readable(filename)) break;
+        fun(filename);
+        ++part;
+    }
+}
+
 } // namespace tpch
 
 using namespace crossbow::program_options;
@@ -771,24 +792,92 @@ int main(int argc, const char* argv[]) {
         tpch::assertOk(session->SetFlushMode(kudu::client::KuduSession::MANUAL_FLUSH));
         session->SetTimeoutMillis(60000);
         tpch::createSchema(*session);
-        tpch::Populate<kudu::client::KuduSession> populate(*session);
-        populate.populate(baseDir);
-        assertOk(session->Flush());
-        assertOk(session->Close());
+        tpch::assertOk(session->Close());
+        std::vector<std::thread> threads;
+        for (std::string tableName : {"part", "partsupp", "supplier", "customer", "orders", "lineitem", "nation", "region"}) {
+            tpch::getFiles(baseDir, tableName, [&threads, &client, &tableName](const std::string& fName){
+                threads.emplace_back([fName, &client, tableName](){
+                    std::fstream in(fName.c_str(), std::ios_base::in);
+                    auto session = client->NewSession();
+                    tpch::assertOk(session->SetFlushMode(kudu::client::KuduSession::MANUAL_FLUSH));
+                    session->SetTimeoutMillis(60000);
+                    tpch::Populate<kudu::client::KuduSession> populate(*session);
+                    if (tableName == "part") {
+                        populate.populatePart(in);
+                    } else if (tableName == "partsupp") {
+                        populate.populatePartsupp(in);
+                    } else if (tableName == "supplier") {
+                        populate.populateSupplier(in);
+                    } else if (tableName == "customer") {
+                        populate.populateCustomer(in);
+                    } else if (tableName == "orders") {
+                        populate.populateOrder(in);
+                    } else if (tableName == "lineitem") {
+                        populate.populateLineitem(in);
+                    } else if (tableName == "nation") {
+                        populate.populateNation(in);
+                    } else if (tableName == "region") {
+                        populate.populateRegion(in);
+                    } else {
+                        std::cerr << "Table " << tableName << " does not exist" << std::endl;
+                        std::terminate();
+                    }
+                    tpch::assertOk(session->Flush());
+                    tpch::assertOk(session->Close());
+                });
+            });
+        }
+        for (auto& t : threads) {
+            t.join();
+        }
     } else {
         tell::store::ClientConfig clientConfig;
         clientConfig.tellStore = clientConfig.parseTellStore(storage);
         clientConfig.commitManager = crossbow::infinio::Endpoint(crossbow::infinio::Endpoint::ipv4(), commitManager.c_str());
         tell::db::ClientManager<void> clientManager(clientConfig);
+        std::vector<tell::db::TransactionFiber<void>> fibers;
         auto fun = [&baseDir](tell::db::Transaction& tx){
             tx.unsafeNoUndoLog();
             tpch::createSchema(tx);
             tpch::Populate<tell::db::Transaction> populate(tx);
-            populate.populate(baseDir);
+            //populate.populate(baseDir);
         };
-        auto fiber = clientManager.startTransaction(fun, tell::store::TransactionType::READ_WRITE);
-        fiber.wait();
+        fibers.emplace_back(clientManager.startTransaction(fun, tell::store::TransactionType::READ_WRITE));
+        for (std::string tableName : {"part", "partsupp", "supplier", "customer", "orders", "lineitem", "nation", "region"}) {
+            tpch::getFiles(baseDir, tableName, [&fibers, &clientManager, &tableName](const std::string& fName){
+                auto transaction = [tableName, fName](tell::db::Transaction& tx) {
+                    std::fstream in(fName.c_str(), std::ios_base::in);
+                    tpch::Populate<tell::db::Transaction> populate(tx);
+                    if (tableName == "part") {
+                        populate.populatePart(in);
+                    } else if (tableName == "partsupp") {
+                        populate.populatePartsupp(in);
+                    } else if (tableName == "supplier") {
+                        populate.populateSupplier(in);
+                    } else if (tableName == "customer") {
+                        populate.populateCustomer(in);
+                    } else if (tableName == "orders") {
+                        populate.populateOrder(in);
+                    } else if (tableName == "lineitem") {
+                        populate.populateLineitem(in);
+                    } else if (tableName == "nation") {
+                        populate.populateNation(in);
+                    } else if (tableName == "region") {
+                        populate.populateRegion(in);
+                    } else {
+                        std::cerr << "Table " << tableName << " does not exist" << std::endl;
+                        std::terminate();
+                    }
+                    tx.commit();
+                };
+                fibers.emplace_back(clientManager.startTransaction(transaction, tell::store::TransactionType::READ_WRITE));
+            });
+        }
+        for (auto& f : fibers) {
+            f.wait();
+        }
     }
+    std::cout << "DONE\n";
     return 0;
 }
 

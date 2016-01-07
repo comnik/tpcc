@@ -89,6 +89,7 @@ if(${USE_KUDU})
     target_link_libraries(tpch PRIVATE ${CMAKE_THREAD_LIBS_INIT})
     target_link_libraries(tpch PRIVATE tpcc_common)
     target_link_libraries(tpch PRIVATE telldb)
+    target_link_libraries(tpch PRIVATE ${Boost_LIBRARIES})
     target_link_libraries(tpch PRIVATE crossbow_allocator)
     target_link_libraries(tpch PRIVATE ${Jemalloc_LIBRARIES})
     

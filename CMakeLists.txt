@@ -1,10 +1,9 @@
-cmake_minimum_required(VERSION 3.0.2)
 project(tpcc)
 
 # Set CMake modules path
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 
-find_package(Boost REQUIRED COMPONENTS system)
+find_package(Boost REQUIRED COMPONENTS system date_time)
 find_package(TellDB REQUIRED)
 find_package(Crossbow REQUIRED)
 find_package(Jemalloc REQUIRED)
@@ -71,10 +70,28 @@ if(${USE_KUDU})
         server/PopulateKudu.cpp
         server/TransactionsKudu.cpp)
 
-    add_executable(tpcc_kudu ${KUDU_SERVER_SRC} ${KUDU_INTERFACE_SRC})
+    add_executable(tpcc_kudu ${KUDU_SERVER_SRC})
     target_include_directories(tpcc_kudu PRIVATE ${KUDU_CLIENT_INCLUDE_DIR})
     target_compile_definitions(tpcc_kudu PRIVATE TPCC_KUDU)
     target_link_libraries(tpcc_kudu kudu_client)
     target_link_libraries(tpcc_kudu tpcc_common)
     target_link_libraries(tpcc_kudu ${CMAKE_THREAD_LIBS_INIT})
+
+    set(TPCH_SRCS
+        server/tpch.cpp)
+    add_executable(tpch ${TPCH_SRCS})
+    target_include_directories(tpch PRIVATE ${KUDU_CLIENT_INCLUDE_DIR})
+    target_compile_definitions(tpch PRIVATE TPCC_KUDU)
+    target_include_directories(tpch PRIVATE ${Jemalloc_INCLUDE_DIRS})
+
+    target_link_libraries(tpch PRIVATE kudu_client)
+    target_link_libraries(tpch PRIVATE tpcc_common)
+    target_link_libraries(tpch PRIVATE ${CMAKE_THREAD_LIBS_INIT})
+    target_link_libraries(tpch PRIVATE tpcc_common)
+    target_link_libraries(tpch PRIVATE telldb)
+    target_link_libraries(tpch PRIVATE crossbow_allocator)
+    target_link_libraries(tpch PRIVATE ${Jemalloc_LIBRARIES})
+    
+    # Link against Jemalloc
+    target_link_libraries(tpch PRIVATE ${Jemalloc_LIBRARIES})
 endif()

@@ -157,118 +157,118 @@ struct TableCreator<Transaction> {
 template<class T>
 void createPart(T& tx) {
     TableCreator<T> tc(tx);
-    tc("P_PARTKEY", type::INT);
-    tc("P_NAME", type::TEXT);
-    tc("P_MFGR", type::TEXT);
-    tc("P_BRAND", type::TEXT);
-    tc("P_TYPE", type::TEXT);
-    tc("P_SIZE", type::INT);
-    tc("P_CONTAINER", type::TEXT);
-    tc("P_RETAILPRICE", type::DOUBLE);
-    tc("P_COMMENT", type::TEXT);
-    tc.setPrimaryKey({"P_PARTKEY"});
-    tc.create("PART");
+    tc("p_partkey", type::INT);
+    tc("p_name", type::TEXT);
+    tc("p_mfgr", type::TEXT);
+    tc("p_brand", type::TEXT);
+    tc("p_type", type::TEXT);
+    tc("p_size", type::INT);
+    tc("p_container", type::TEXT);
+    tc("p_retailprice", type::DOUBLE);
+    tc("p_comment", type::TEXT);
+    tc.setPrimaryKey({"p_partkey"});
+    tc.create("part");
 }
 
 template<class T>
 void createSupplier(T& tx) {
     TableCreator<T> tc(tx);
-    tc("S_SUPPKEY", type::INT);
-    tc("S_NAME", type::TEXT);
-    tc("S_ADDRESS", type::TEXT);
-    tc("S_NATIONKEY", type::INT);
-    tc("S_PHONE", type::TEXT);
-    tc("S_ACCTBAL", type::DOUBLE);
-    tc("S_COMMENT", type::TEXT);
-    tc.setPrimaryKey({"S_SUPPKEY"});
-    tc.create("SUPPLIER");
+    tc("s_suppkey", type::INT);
+    tc("s_name", type::TEXT);
+    tc("s_address", type::TEXT);
+    tc("s_nationkey", type::INT);
+    tc("s_phone", type::TEXT);
+    tc("s_acctbal", type::DOUBLE);
+    tc("s_comment", type::TEXT);
+    tc.setPrimaryKey({"s_suppkey"});
+    tc.create("supplier");
 }
 
 template<class T>
 void createPartsupp(T& tx) {
     TableCreator<T> tc(tx);
-    tc("PS_PARTKEY", type::INT);
-    tc("PS_SUPPKEY", type::INT);
-    tc("PS_AVAILQTY", type::INT);
-    tc("PS_SUPPLYCOST", type::DOUBLE);
-    tc("PS_COMMENT", type::TEXT);
-    tc.setPrimaryKey({"PS_PARTKEY", "PS_SUPPKEY"});
-    tc.create("PARTSUPP");
+    tc("ps_partkey", type::INT);
+    tc("ps_suppkey", type::INT);
+    tc("ps_availqty", type::INT);
+    tc("ps_supplycost", type::DOUBLE);
+    tc("ps_comment", type::TEXT);
+    tc.setPrimaryKey({"ps_partkey", "ps_suppkey"});
+    tc.create("partsupp");
 }
 
 template<class T>
 void createCustomer(T& tx) {
     TableCreator<T> tc(tx);
-    tc("C_CUSTKEY", type::INT);
-    tc("C_NAME", type::TEXT);
-    tc("C_ADDRESS", type::TEXT);
-    tc("C_NATIONKEY", type::INT);
-    tc("C_PHONE", type::TEXT);
-    tc("C_ACCTBAL", type::DOUBLE);
-    tc("C_MKTSEGMENT", type::TEXT);
-    tc("C_COMMENT", type::TEXT);
-    tc.setPrimaryKey({"C_CUSTKEY"});
-    tc.create("CUSTOMER");
+    tc("c_custkey", type::INT);
+    tc("c_name", type::TEXT);
+    tc("c_address", type::TEXT);
+    tc("c_nationkey", type::INT);
+    tc("c_phone", type::TEXT);
+    tc("c_acctbal", type::DOUBLE);
+    tc("c_mktsegment", type::TEXT);
+    tc("c_comment", type::TEXT);
+    tc.setPrimaryKey({"c_custkey"});
+    tc.create("customer");
 }
 
 template<class T>
 void createOrder(T& tx) {
     TableCreator<T> tc(tx);
-    tc("O_ORDERKEY", type::INT);
-    tc("O_CUSTKEY", type::INT);
-    tc("O_ORDERSTATUS", type::TEXT);
-    tc("O_TOTALPRICE", type::DOUBLE);
-    tc("O_ORDERDATE", type::BIGINT);
-    tc("O_ORDERPRIORITY", type::TEXT);
-    tc("O_CLERK", type::TEXT);
-    tc("O_SHIPPRIORITY", type::INT);
-    tc("O_COMMENT", type::TEXT);
-    tc.setPrimaryKey({"O_ORDERKEY"});
-    tc.create("ORDERS");
+    tc("o_orderkey", type::INT);
+    tc("o_custkey", type::INT);
+    tc("o_orderstatus", type::TEXT);
+    tc("o_totalprice", type::DOUBLE);
+    tc("o_orderdate", type::BIGINT);
+    tc("o_orderpriority", type::TEXT);
+    tc("o_clerk", type::TEXT);
+    tc("o_shippriority", type::INT);
+    tc("o_comment", type::TEXT);
+    tc.setPrimaryKey({"o_orderkey"});
+    tc.create("orders");
 }
 
 template<class T>
 void createLineitem(T& tx) {
     TableCreator<T> tc(tx);
-    tc("L_ORDERKEY", type::INT);
-    tc("L_LINENUMBER", type::INT);
-    tc("L_PARTKEY", type::INT);
-    tc("L_SUPPKEY", type::INT);
-    tc("L_QUANTITY", type::DOUBLE);
-    tc("L_EXTENDEDPRICE", type::DOUBLE);
-    tc("L_DISCOUNT", type::DOUBLE);
-    tc("L_TAX", type::DOUBLE);
-    tc("L_RETURNFLAG", type::TEXT);
-    tc("L_LINESTATUS", type::TEXT);
-    tc("L_SHIPDATE", type::BIGINT);
-    tc("L_COMMITDATE", type::BIGINT);
-    tc("L_RECEIPTDATE", type::BIGINT);
-    tc("L_SHIPINSTRUCT", type::TEXT);
-    tc("L_SHIPMODE", type::TEXT);
-    tc("L_COMMENT", type::TEXT);
-    tc.setPrimaryKey({"L_ORDERKEY", "L_LINENUMBER"});
-    tc.create("LINEITEM");
+    tc("l_orderkey", type::INT);
+    tc("l_linenumber", type::INT);
+    tc("l_partkey", type::INT);
+    tc("l_suppkey", type::INT);
+    tc("l_quantity", type::DOUBLE);
+    tc("l_extendedprice", type::DOUBLE);
+    tc("l_discount", type::DOUBLE);
+    tc("l_tax", type::DOUBLE);
+    tc("l_returnflag", type::TEXT);
+    tc("l_linestatus", type::TEXT);
+    tc("l_shipdate", type::BIGINT);
+    tc("l_commitdate", type::BIGINT);
+    tc("l_receiptdate", type::BIGINT);
+    tc("l_shipinstruct", type::TEXT);
+    tc("l_shipmode", type::TEXT);
+    tc("l_comment", type::TEXT);
+    tc.setPrimaryKey({"l_orderkey", "l_linenumber"});
+    tc.create("lineitem");
 }
 
 template<class T>
 void createNation(T& tx) {
     TableCreator<T> tc(tx);
-    tc("N_NATIONKEY", type::INT);
-    tc("N_NAME", type::TEXT);
-    tc("N_REGIONKEY", type::INT);
-    tc("N_COMMENT", type::TEXT);
-    tc.setPrimaryKey({"N_NATIONKEY"});
-    tc.create("NATION");
+    tc("n_nationkey", type::INT);
+    tc("n_name", type::TEXT);
+    tc("n_regionkey", type::INT);
+    tc("n_comment", type::TEXT);
+    tc.setPrimaryKey({"n_nationkey"});
+    tc.create("nation");
 }
 
 template<class T>
 void createRegion(T& tx) {
     TableCreator<T> tc(tx);
-    tc("R_REGIONKEY", type::INT);
-    tc("R_NAME", type::TEXT);
-    tc("R_COMMENT", type::TEXT);
-    tc.setPrimaryKey({"R_REGIONKEY"});
-    tc.create("REGION");
+    tc("r_regionkey", type::INT);
+    tc("r_name", type::TEXT);
+    tc("r_comment", type::TEXT);
+    tc.setPrimaryKey({"r_regionkey"});
+    tc.create("region");
 }
 
 template<class T>
@@ -529,20 +529,20 @@ struct Populate {
 
     void populatePart(std::istream& in) {
         using t = std::tuple<int32_t, string, string, string, string, int32_t, string, double, string>;
-        P p(tx, "PART");
+        P p(tx, "part");
         int count = 0;
         getFields<t>(in,
             [&count, &p](const t& fields)
             {
-                p("P_PARTKEY",     std::get<0>(fields));
-                p("P_NAME",        std::get<1>(fields));
-                p("P_MFGR",        std::get<2>(fields));
-                p("P_BRAND",       std::get<3>(fields));
-                p("P_TYPE",        std::get<4>(fields));
-                p("P_SIZE",        std::get<5>(fields));
-                p("P_CONTAINER",   std::get<6>(fields));
-                p("P_RETAILPRICE", std::get<7>(fields));
-                p("P_COMMENT",     std::get<8>(fields));
+                p("p_partkey",     std::get<0>(fields));
+                p("p_name",        std::get<1>(fields));
+                p("p_mfgr",        std::get<2>(fields));
+                p("p_brand",       std::get<3>(fields));
+                p("p_type",        std::get<4>(fields));
+                p("p_size",        std::get<5>(fields));
+                p("p_container",   std::get<6>(fields));
+                p("p_retailprice", std::get<7>(fields));
+                p("p_comment",     std::get<8>(fields));
                 p.apply(uint64_t(std::get<0>(fields)));
                 if (++count % 1000 == 0)
                     p.flush();
@@ -552,17 +552,17 @@ struct Populate {
 
     void populateSupplier(std::istream& in) {
         using t = std::tuple<int32_t, string, string, int32_t, string, double, string>;
-        P p(tx, "SUPPLIER");
+        P p(tx, "supplier");
         int count = 0;
         getFields<t>(in,
                 [&count, &p](const t& fields) {
-                    p("S_SUPPKEY",   std::get<0>(fields));
-                    p("S_NAME",      std::get<1>(fields));
-                    p("S_ADDRESS",   std::get<2>(fields));
-                    p("S_NATIONKEY", std::get<3>(fields));
-                    p("S_PHONE",     std::get<4>(fields));
-                    p("S_ACCTBAL",   std::get<5>(fields));
-                    p("S_COMMENT",   std::get<6>(fields));
+                    p("s_suppkey",   std::get<0>(fields));
+                    p("s_name",      std::get<1>(fields));
+                    p("s_address",   std::get<2>(fields));
+                    p("s_nationkey", std::get<3>(fields));
+                    p("s_phone",     std::get<4>(fields));
+                    p("s_acctbal",   std::get<5>(fields));
+                    p("s_comment",   std::get<6>(fields));
                     p.apply(std::get<0>(fields));
                     if (++count % 1000 == 0)
                         p.flush();
@@ -572,15 +572,15 @@ struct Populate {
 
     void populatePartsupp(std::istream& in) {
         using t = std::tuple<int32_t, int32_t, int32_t, double, string>;
-        P p(tx, "PARTSUPP");
+        P p(tx, "partsupp");
         int count = 0;
         getFields<t>(in,
                 [&count, &p](const t& fields) {
-                    p("PS_PARTKEY",   std::get<0>(fields));
-                    p("PS_SUPPKEY",   std::get<1>(fields));
-                    p("PS_AVAILQTY",  std::get<2>(fields));
-                    p("PS_SUPPLYCOST",std::get<3>(fields));
-                    p("PS_COMMENT",   std::get<4>(fields));
+                    p("ps_partkey",   std::get<0>(fields));
+                    p("ps_suppkey",   std::get<1>(fields));
+                    p("ps_availqty",  std::get<2>(fields));
+                    p("ps_supplycost",std::get<3>(fields));
+                    p("ps_comment",   std::get<4>(fields));
                     p.apply((uint64_t(std::get<0>(fields)) << 32 | uint64_t(std::get<1>(fields))));
                     if (++count % 1000 == 0)
                         p.flush();
@@ -590,18 +590,18 @@ struct Populate {
 
     void populateCustomer(std::istream& in) {
         using t = std::tuple<int32_t, string, string, int32_t, string, double, string, string>;
-        P p(tx, "CUSTOMER");
+        P p(tx, "customer");
         int count = 0;
         getFields<t>(in,
                 [&count, &p](const t& fields) {
-                    p("C_CUSTKEY",    std::get<0>(fields));
-                    p("C_NAME",       std::get<1>(fields));
-                    p("C_ADDRESS",    std::get<2>(fields));
-                    p("C_NATIONKEY",  std::get<3>(fields));
-                    p("C_PHONE",      std::get<4>(fields));
-                    p("C_ACCTBAL",    std::get<5>(fields));
-                    p("C_MKTSEGMENT", std::get<6>(fields));
-                    p("C_COMMENT",    std::get<7>(fields));
+                    p("c_custkey",    std::get<0>(fields));
+                    p("c_name",       std::get<1>(fields));
+                    p("c_address",    std::get<2>(fields));
+                    p("c_nationkey",  std::get<3>(fields));
+                    p("c_phone",      std::get<4>(fields));
+                    p("c_acctbal",    std::get<5>(fields));
+                    p("c_mktsegment", std::get<6>(fields));
+                    p("c_comment",    std::get<7>(fields));
                     p.apply(std::get<0>(fields));
                     if (++count % 1000 == 0)
                         p.flush();
@@ -611,19 +611,19 @@ struct Populate {
 
     void populateOrder(std::istream& in) {
         using t = std::tuple<int32_t, int32_t, string, double, date, string, string, int32_t, string>;
-        P p(tx, "ORDERS");
+        P p(tx, "orders");
         int count = 0;
         getFields<t>(in,
                 [&count, &p](const t& fields) {
-                    p("O_ORDERKEY",     std::get<0>(fields));
-                    p("O_CUSTKEY",      std::get<1>(fields));
-                    p("O_ORDERSTATUS",  std::get<2>(fields));
-                    p("O_TOTALPRICE",   std::get<3>(fields));
-                    p("O_ORDERDATE",    std::get<4>(fields));
-                    p("O_ORDERPRIORITY",std::get<5>(fields));
-                    p("O_CLERK",        std::get<6>(fields));
-                    p("O_SHIPPRIORITY", std::get<7>(fields));
-                    p("O_COMMENT",      std::get<8>(fields));
+                    p("o_orderkey",     std::get<0>(fields));
+                    p("o_custkey",      std::get<1>(fields));
+                    p("o_orderstatus",  std::get<2>(fields));
+                    p("o_totalprice",   std::get<3>(fields));
+                    p("o_orderdate",    std::get<4>(fields));
+                    p("o_orderpriority",std::get<5>(fields));
+                    p("o_clerk",        std::get<6>(fields));
+                    p("o_shippriority", std::get<7>(fields));
+                    p("o_comment",      std::get<8>(fields));
                     p.apply(std::get<0>(fields));
                     if (++count % 1000 == 0)
                         p.flush();
@@ -633,26 +633,26 @@ struct Populate {
 
     void populateLineitem(std::istream& in) {
         using t = std::tuple<int32_t, int32_t, int32_t, int32_t, double, double, double, double, string, string, date, date, date, string, string, string>;
-        P p(tx, "LINEITEM");
+        P p(tx, "lineitem");
         int count = 0;
         getFields<t>(in,
                 [&count, &p](const t& fields) {
-                    p("L_ORDERKEY",      std::get<0>(fields));
-                    p("L_PARTKEY",       std::get<1>(fields));
-                    p("L_SUPPKEY",       std::get<2>(fields));
-                    p("L_LINENUMBER",    std::get<3>(fields));
-                    p("L_QUANTITY",      std::get<4>(fields));
-                    p("L_EXTENDEDPRICE", std::get<5>(fields));
-                    p("L_DISCOUNT",      std::get<6>(fields));
-                    p("L_TAX",           std::get<7>(fields));
-                    p("L_RETURNFLAG",    std::get<8>(fields));
-                    p("L_LINESTATUS",    std::get<9>(fields));
-                    p("L_SHIPDATE",      std::get<10>(fields));
-                    p("L_COMMITDATE",    std::get<11>(fields));
-                    p("L_RECEIPTDATE",   std::get<12>(fields));
-                    p("L_SHIPINSTRUCT",  std::get<13>(fields));
-                    p("L_SHIPMODE",      std::get<14>(fields));
-                    p("L_COMMENT",       std::get<15>(fields));
+                    p("l_orderkey",      std::get<0>(fields));
+                    p("l_partkey",       std::get<1>(fields));
+                    p("l_suppkey",       std::get<2>(fields));
+                    p("l_linenumber",    std::get<3>(fields));
+                    p("l_quantity",      std::get<4>(fields));
+                    p("l_extendedprice", std::get<5>(fields));
+                    p("l_discount",      std::get<6>(fields));
+                    p("l_tax",           std::get<7>(fields));
+                    p("l_returnflag",    std::get<8>(fields));
+                    p("l_linestatus",    std::get<9>(fields));
+                    p("l_shipdate",      std::get<10>(fields));
+                    p("l_commitdate",    std::get<11>(fields));
+                    p("l_receiptdate",   std::get<12>(fields));
+                    p("l_shipinstruct",  std::get<13>(fields));
+                    p("l_shipmode",      std::get<14>(fields));
+                    p("l_comment",       std::get<15>(fields));
                     uint64_t key = uint64_t(std::get<0>(fields)) << 32;
                     key |= uint64_t(std::get<3>(fields));
                     p.apply(key);
@@ -664,14 +664,14 @@ struct Populate {
 
     void populateNation(std::istream& in) {
         using t = std::tuple<int32_t, string, int32_t, string>;
-        P p(tx, "NATION");
+        P p(tx, "nation");
         int count = 0;
         getFields<t>(in,
                 [&count, &p](const t& fields) {
-                    p("N_NATIONKEY", std::get<0>(fields));
-                    p("N_NAME",      std::get<1>(fields));
-                    p("N_REGIONKEY", std::get<2>(fields));
-                    p("N_COMMENT",   std::get<3>(fields));
+                    p("n_nationkey", std::get<0>(fields));
+                    p("n_name",      std::get<1>(fields));
+                    p("n_regionkey", std::get<2>(fields));
+                    p("n_comment",   std::get<3>(fields));
                     p.apply(std::get<0>(fields));
                     if (++count % 1000 == 0)
                         p.flush();
@@ -681,13 +681,13 @@ struct Populate {
 
     void populateRegion(std::istream& in) {
         using t = std::tuple<int32_t, string, string>;
-        P p(tx, "REGION");
+        P p(tx, "region");
         int count = 0;
         getFields<t>(in,
                 [&count, &p](const t& fields) {
-                    p("R_REGIONKEY", std::get<0>(fields));
-                    p("R_NAME",      std::get<1>(fields));
-                    p("R_COMMENT",   std::get<2>(fields));
+                    p("r_regionkey", std::get<0>(fields));
+                    p("r_name",      std::get<1>(fields));
+                    p("r_comment",   std::get<2>(fields));
                     p.apply(std::get<0>(fields));
                     if (++count % 1000 == 0)
                         p.flush();

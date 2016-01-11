@@ -149,7 +149,7 @@ std::vector<std::string> split(const std::string& str, const char delim) {
 
 int64_t now() {
     auto now = std::chrono::system_clock::now();
-    return now.time_since_epoch().count();
+    return std::chrono::duration_cast<std::chrono::milliseconds>(now.time_since_epoch()).count();
 }
 
 }

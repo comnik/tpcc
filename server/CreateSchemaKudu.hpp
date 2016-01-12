@@ -26,6 +26,6 @@
 
 namespace tpcc {
 
-void createSchema(kudu::client::KuduSession& session, bool useCH = false);
+void createSchema(kudu::client::KuduSession& session, int partitions, bool useCH = false);
 
 }

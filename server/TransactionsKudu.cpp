@@ -100,10 +100,10 @@ KuduRowResult get(KuduTable& table, ScannerList& scanners, const Args&... args) 
     scanners.emplace_back(new KuduScanner(&table));
     auto& scanner = *scanners.back();
     addPredicates(table, scanner, args...);
-    scanner.Open();
+    assertOk(scanner.Open());
     assert(scanner.HasMoreRows());
     std::vector<KuduRowResult> rows;
-    scanner.NextBatch(&rows);
+    assertOk(scanner.NextBatch(&rows));
     return rows[0];
 }
 

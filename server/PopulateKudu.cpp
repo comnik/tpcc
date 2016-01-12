@@ -39,21 +39,18 @@ void Populator::populateDimTables(KuduSession &session, bool useCH)
     }
 }
 
-void insert(KuduSession& session, const std::string& tableName) {
-}
-
 void Populator::populateWarehouse(KuduSession &session,
                                   int16_t w_id, bool useCH) {
     std::tr1::shared_ptr<KuduTable> table;
     assertOk(session.client()->OpenTable("warehouse", &table));
     auto ins = table->NewInsert();
     assertOk(ins->mutable_row()->SetInt16("w_id", w_id));
-    assertOk(ins->mutable_row()->SetString("w_name", mRandom.astring(6, 10).c_str()));
-    assertOk(ins->mutable_row()->SetString("w_street_1", mRandom.astring(10, 20).c_str()));
-    assertOk(ins->mutable_row()->SetString("w_street_2", mRandom.astring(10, 20).c_str()));
-    assertOk(ins->mutable_row()->SetString("w_city", mRandom.astring(10, 20).c_str()));
-    assertOk(ins->mutable_row()->SetString("w_state", mRandom.astring(10, 20).c_str()));
-    assertOk(ins->mutable_row()->SetString("w_zip", mRandom.astring(2, 2).c_str()));
+    assertOk(ins->mutable_row()->SetStringCopy("w_name", mRandom.astring(6, 10).c_str()));
+    assertOk(ins->mutable_row()->SetStringCopy("w_street_1", mRandom.astring(10, 20).c_str()));
+    assertOk(ins->mutable_row()->SetStringCopy("w_street_2", mRandom.astring(10, 20).c_str()));
+    assertOk(ins->mutable_row()->SetStringCopy("w_city", mRandom.astring(10, 20).c_str()));
+    assertOk(ins->mutable_row()->SetStringCopy("w_state", mRandom.astring(10, 20).c_str()));
+    assertOk(ins->mutable_row()->SetStringCopy("w_zip", mRandom.astring(2, 2).c_str()));
     assertOk(ins->mutable_row()->SetInt32("w_tax", mRandom.random<int32_t>(0, 2000)));
     assertOk(ins->mutable_row()->SetInt64("w_ytd", int64_t(30000000)));
     assertOk(session.Apply(ins));
@@ -69,9 +66,9 @@ void Populator::populateItems(KuduSession &session) {
         auto ins = table->NewInsert();
         assertOk(ins->mutable_row()->SetInt32("i_id", i));
         assertOk(ins->mutable_row()->SetInt32("i_im_id", mRandom.randomWithin<int32_t>(1, 10000)));
-        assertOk(ins->mutable_row()->SetString("i_name", mRandom.astring(14, 24).c_str()));
+        assertOk(ins->mutable_row()->SetStringCopy("i_name", mRandom.astring(14, 24).c_str()));
         assertOk(ins->mutable_row()->SetInt32("i_price", mRandom.randomWithin<int32_t>(100, 10000)));
-        assertOk(ins->mutable_row()->SetString("i_data", mRandom.astring(26, 50).c_str()));
+        assertOk(ins->mutable_row()->SetStringCopy("i_data", mRandom.astring(26, 50).c_str()));
         assertOk(session.Apply(ins));
         if (i % 1000 == 0) assertOk(session.Flush());
     }
@@ -94,8 +91,8 @@ void Populator::populateRegions(KuduSession &session)
         auto row = ins->mutable_row();
         int16_t intKey = static_cast<int16_t>(std::stoi(items[0]));
         assertOk(row->SetInt16("r_regionkey", intKey));
-        assertOk(row->SetString("r_name", items[1]));
-        assertOk(row->SetString("r_comment", items[2]));
+        assertOk(row->SetStringCopy("r_name", items[1]));
+        assertOk(row->SetStringCopy("r_comment", items[2]));
         assertOk(session.Apply(ins));
     }
     assertOk(session.Flush());
@@ -117,9 +114,9 @@ void Populator::populateNations(KuduSession &session)
         auto row = ins->mutable_row();
         int16_t intKey = static_cast<int16_t>(std::stoi(items[0]));
         assertOk(row->SetInt16("n_nationkey", intKey));
-        assertOk(row->SetString("n_name", items[1]));
+        assertOk(row->SetStringCopy("n_name", items[1]));
         assertOk(row->SetInt16("n_regionkey", static_cast<int16_t>(std::stoi(items[2]))));
-        assertOk(row->SetString("n_comment", items[3]));
+        assertOk(row->SetStringCopy("n_comment", items[3]));
         assertOk(session.Apply(ins));
     }
     assertOk(session.Flush());
@@ -143,12 +140,12 @@ void Populator::populateSuppliers(KuduSession &session)
         auto ins = table->NewInsert();
         auto row = ins->mutable_row();
         assertOk(row->SetInt16("su_suppkey", intKey));
-        assertOk(row->SetString("su_name", items[1]));
-        assertOk(row->SetString("su_address", items[2]));
+        assertOk(row->SetStringCopy("su_name", items[1]));
+        assertOk(row->SetStringCopy("su_address", items[2]));
         assertOk(row->SetInt16("su_nationkey", static_cast<int16_t>(std::stoi(items[3]))));
-        assertOk(row->SetString("su_phone", items[4]));
+        assertOk(row->SetStringCopy("su_phone", items[4]));
         assertOk(row->SetInt64("su_acctbal", static_cast<int64_t>(std::stoll(acctbal))));
-        assertOk(row->SetString("su_comment", items[6]));
+        assertOk(row->SetStringCopy("su_comment", items[6]));
         assertOk(session.Apply(ins));
     }
     assertOk(session.Flush());
@@ -174,20 +171,20 @@ void Populator::populateStocks(KuduSession &session,
         assertOk(row->SetInt32("s_i_id", s_i_id));
         assertOk(row->SetInt16("s_w_id", w_id));
         assertOk(row->SetInt32("s_quantity", int(mRandom.randomWithin(10, 100))));
-        assertOk(row->SetString("s_dist_01", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_02", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_03", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_04", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_05", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_06", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_07", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_08", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_09", mRandom.astring(24, 24).c_str()));
-        assertOk(row->SetString("s_dist_10", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_01", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_02", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_03", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_04", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_05", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_06", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_07", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_08", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_09", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("s_dist_10", mRandom.astring(24, 24).c_str()));
         assertOk(row->SetInt32("s_ytd", int(0)));
         assertOk(row->SetInt16("s_order_cnt", int16_t(0)));
         assertOk(row->SetInt16("s_remote_cnt", int16_t(0)));
-        assertOk(row->SetString("s_data", s_data.c_str()));
+        assertOk(row->SetStringCopy("s_data", s_data.c_str()));
         if (useCH)
             assertOk(row->SetInt16("s_su_suppkey", mRandom.randomWithin<int16_t>(1, 10000)));
         assertOk(session.Apply(ins));
@@ -206,12 +203,12 @@ void Populator::populateDistricts(KuduSession &session,
         auto row = ins->mutable_row();
         assertOk(row->SetInt16("d_id", i));
         assertOk(row->SetInt16("d_w_id", w_id));
-        assertOk(row->SetString("d_name", mRandom.astring(6, 10).c_str()));
-        assertOk(row->SetString("d_street_1", mRandom.astring(10, 20).c_str()));
-        assertOk(row->SetString("d_street_2", mRandom.astring(10, 20).c_str()));
-        assertOk(row->SetString("d_city", mRandom.astring(10, 20).c_str()));
-        assertOk(row->SetString("d_state", mRandom.astring(2, 2).c_str()));
-        assertOk(row->SetString("d_zip", mRandom.zipCode().c_str()));
+        assertOk(row->SetStringCopy("d_name", mRandom.astring(6, 10).c_str()));
+        assertOk(row->SetStringCopy("d_street_1", mRandom.astring(10, 20).c_str()));
+        assertOk(row->SetStringCopy("d_street_2", mRandom.astring(10, 20).c_str()));
+        assertOk(row->SetStringCopy("d_city", mRandom.astring(10, 20).c_str()));
+        assertOk(row->SetStringCopy("d_state", mRandom.astring(2, 2).c_str()));
+        assertOk(row->SetStringCopy("d_zip", mRandom.zipCode().c_str()));
         assertOk(row->SetInt32("d_tax", int(mRandom.randomWithin(0, 2000))));
         assertOk(row->SetInt64("d_ytd", int64_t(3000000)));
         assertOk(row->SetInt32("d_next_o_id", int(3001)));
@@ -281,24 +278,24 @@ void Populator::populateCustomers(KuduSession &session,
         assertOk(row->SetInt32("c_id", c_id));
         assertOk(row->SetInt16("c_d_id", d_id));
         assertOk(row->SetInt16("c_w_id", w_id));
-        assertOk(row->SetString("c_first", c_first));
-        assertOk(row->SetString("c_middle", "OE"));
-        assertOk(row->SetString("c_last", c_last));
-        assertOk(row->SetString("c_street_1", mRandom.astring(10, 20).c_str()));
-        assertOk(row->SetString("c_street_2", mRandom.astring(10, 20).c_str()));
-        assertOk(row->SetString("c_city", mRandom.astring(10, 20).c_str()));
-        assertOk(row->SetString("c_state", mRandom.astring(2, 2).c_str()));
-        assertOk(row->SetString("c_zip", mRandom.zipCode().c_str()));
-        assertOk(row->SetString("c_phone", mRandom.nstring(16, 16).c_str()));
+        assertOk(row->SetStringCopy("c_first", c_first));
+        assertOk(row->SetStringCopy("c_middle", "OE"));
+        assertOk(row->SetStringCopy("c_last", c_last));
+        assertOk(row->SetStringCopy("c_street_1", mRandom.astring(10, 20).c_str()));
+        assertOk(row->SetStringCopy("c_street_2", mRandom.astring(10, 20).c_str()));
+        assertOk(row->SetStringCopy("c_city", mRandom.astring(10, 20).c_str()));
+        assertOk(row->SetStringCopy("c_state", mRandom.astring(2, 2).c_str()));
+        assertOk(row->SetStringCopy("c_zip", mRandom.zipCode().c_str()));
+        assertOk(row->SetStringCopy("c_phone", mRandom.nstring(16, 16).c_str()));
         assertOk(row->SetInt64("c_since", c_since));
-        assertOk(row->SetString("c_credit", c_credit));
+        assertOk(row->SetStringCopy("c_credit", c_credit));
         assertOk(row->SetInt64("c_credit_lim", int64_t(5000000)));
         assertOk(row->SetInt32("c_discount", int(mRandom.randomWithin(0, 50000))));
         assertOk(row->SetInt64("c_balance", int64_t(-1000)));
         assertOk(row->SetInt64("c_ytd_payment", int64_t(1000)));
         assertOk(row->SetInt16("c_payment_cnt", int16_t(1)));
         assertOk(row->SetInt16("c_delivery_cnt", int16_t(0)));
-        assertOk(row->SetString("c_data", mRandom.astring(300, 500).c_str()));
+        assertOk(row->SetStringCopy("c_data", mRandom.astring(300, 500).c_str()));
         if (useCH)
             assertOk(row->SetInt16("c_n_nationkey", int16_t(mRandom.randomWithin(0,24))));
         assertOk(session.Apply(ins));
@@ -310,8 +307,8 @@ void Populator::populateCustomers(KuduSession &session,
             auto row = ins->mutable_row();
             assertOk(row->SetInt16("c_w_id", w_id));
             assertOk(row->SetInt16("c_d_id", d_id));
-            assertOk(row->SetString("c_last", c_last));
-            assertOk(row->SetString("c_first", c_first));
+            assertOk(row->SetStringCopy("c_last", c_last));
+            assertOk(row->SetStringCopy("c_first", c_first));
             assertOk(row->SetInt32("c_id", c_id));
             assertOk(session.Apply(ins));
         }
@@ -336,7 +333,7 @@ void Populator::populateHistory(KuduSession &session,
     assertOk(row->SetInt16("h_w_id", w_id));
     assertOk(row->SetInt64("h_date", n));
     assertOk(row->SetInt32("h_amount", int32_t(1000)));
-    assertOk(row->SetString("h_data", mRandom.astring(12, 24).c_str()));
+    assertOk(row->SetStringCopy("h_data", mRandom.astring(12, 24).c_str()));
     assertOk(session.Apply(ins));
 }
 
@@ -404,7 +401,7 @@ void Populator::populateOrderLines(KuduSession &session,
         assertOk(row->SetInt32("ol_amount", o_id < 2101
                     ? int32_t(0)
                     : mRandom.randomWithin<int32_t>(1, 999999)));
-        assertOk(row->SetString("ol_dist_info", mRandom.astring(24, 24).c_str()));
+        assertOk(row->SetStringCopy("ol_dist_info", mRandom.astring(24, 24).c_str()));
         assertOk(session.Apply(ins));
     }
     assertOk(session.Flush());

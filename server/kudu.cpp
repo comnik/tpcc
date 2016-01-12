@@ -54,12 +54,14 @@ class Connection {
     Session mSession;
     Populator mPopulator;
     Transactions mTxs;
+    int mPartitions;
 public:
-    Connection(boost::asio::io_service& service, kudu::client::KuduClient& client, int16_t numWarehouses)
+    Connection(boost::asio::io_service& service, kudu::client::KuduClient& client, int16_t numWarehouses, int partitions)
         : mSocket(service)
         , mServer(*this, mSocket)
         , mSession(client.NewSession())
         , mTxs(numWarehouses)
+        , mPartitions(partitions)
     {
         assertOk(mSession->SetFlushMode(kudu::client::KuduSession::MANUAL_FLUSH));
         mSession->SetTimeoutMillis(60000);
@@ -84,7 +86,7 @@ public:
     template<Command C, class Callback>
     typename std::enable_if<C == Command::CREATE_SCHEMA, void>::type
     execute(bool args, const Callback& callback) {
-        createSchema(*mSession, args);
+        createSchema(*mSession, mPartitions, args);
         callback(std::make_tuple(true, crossbow::string()));
     }
 
@@ -133,16 +135,16 @@ public:
     }
 };
 
-void accept(io_service& service, ip::tcp::acceptor& a, kudu::client::KuduClient& client, int16_t numWarehouses) {
-    auto conn = new Connection(service, client, numWarehouses);
-    a.async_accept(conn->socket(), [&, conn, numWarehouses](const boost::system::error_code& err) {
+void accept(io_service& service, ip::tcp::acceptor& a, kudu::client::KuduClient& client, int16_t numWarehouses, int partitions) {
+    auto conn = new Connection(service, client, numWarehouses, partitions);
+    a.async_accept(conn->socket(), [&, conn, numWarehouses, partitions](const boost::system::error_code& err) {
         if (err) {
             delete conn;
             LOG_ERROR(err.message());
             return;
         }
         conn->run();
-        accept(service, a, client, numWarehouses);
+        accept(service, a, client, numWarehouses, partitions);
     });
 }
 
@@ -156,10 +158,12 @@ int main(int argc, const char* argv[]) {
     crossbow::string storageNodes;
     int16_t numWarehouses = 0;
     unsigned numThreads = 1;
+    int partitions = -1;
     auto opts = create_options("tpcc_server",
             value<'h'>("help", &help, tag::description{"print help"}),
             value<'H'>("host", &host, tag::description{"Host to bind to"}),
             value<'p'>("port", &port, tag::description{"Port to bind to"}),
+            value<'P'>("partitions", &partitions, tag::description{"Number of partitions per table"}),
             value<'l'>("log-level", &logLevel, tag::description{"The log level"}),
             value<'s'>("storage-nodes", &storageNodes, tag::description{"Semicolon-separated list of storage node addresses"}),
             value<'W'>("num-warehouses", &numWarehouses, tag::description{"Number of warehouses"}),
@@ -178,6 +182,10 @@ int main(int argc, const char* argv[]) {
     }
     if (numWarehouses == 0) {
         std::cerr << "Number of warehouses needs to be set" << std::endl;
+        return 1;
+    }
+    if (partitions == -1) {
+        std::cerr << "Number of partitions needs to be set" << std::endl;
         return 1;
     }
 
@@ -220,7 +228,7 @@ int main(int argc, const char* argv[]) {
         std::tr1::shared_ptr<kudu::client::KuduClient> client;
         tpcc::assertOk(clientBuilder.Build(&client));
         // we do not need to delete this object, it will delete itself
-        tpcc::accept(service, a, *client, numWarehouses);
+        tpcc::accept(service, a, *client, numWarehouses, partitions);
         std::vector<std::thread> threads;
         for (unsigned i = 0; i < numThreads; ++i) {
             threads.emplace_back([&service](){

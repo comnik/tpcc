@@ -22,6 +22,7 @@
  */
 #include "CreateSchemaKudu.hpp"
 #include "kudu.hpp"
+#include <thread>
 
 namespace tpcc {
 
@@ -62,12 +63,13 @@ void addField(kudu::client::KuduSchemaBuilder& schemaBuilder, FieldType type, co
     }
 }
 
-void createWarehouse(kudu::client::KuduSession& session) {
+void createWarehouse(kudu::client::KuduSession& session, int partitions) {
     // Warehouse table
     // w_id is used as primary key (since we are not issuing range queries)
     // w_id is a 16 bit number
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
     tableCreator->num_replicas(1);
+    tableCreator->add_hash_partitions({"w_id"}, partitions);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
     addField(schemaBuilder, FieldType::SMALLINT, "w_id", true);
@@ -85,12 +87,13 @@ void createWarehouse(kudu::client::KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("warehouse");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createDistrict(KuduSession& session) {
+void createDistrict(KuduSession& session, int partitions) {
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
     tableCreator->num_replicas(1);
+    tableCreator->add_hash_partitions({"d_w_id", "d_id"}, partitions);
     kudu::client::KuduSchemaBuilder schemaBuilder;
     // Primary key: (d_w_id, d_id)
     //              ( 2 b    1 byte
@@ -111,16 +114,17 @@ void createDistrict(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("district");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createCustomer(KuduSession& session, bool useCH) {
+void createCustomer(KuduSession& session, int partitions, bool useCH) {
     // Primary key: (c_w_id, c_d_id, c_id)
     // c_w_id: 2 bytes
     // c_d_id: 1 byte
     // c_id: 4 bytes
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
     tableCreator->num_replicas(1);
+    tableCreator->add_hash_partitions({"c_w_id", "c_d_id", "c_id"}, partitions);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
     addField(schemaBuilder, FieldType::SMALLINT, "c_w_id", true);
@@ -150,6 +154,7 @@ void createCustomer(KuduSession& session, bool useCH) {
     {
         std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
         tableCreator->num_replicas(1);
+        tableCreator->add_hash_partitions({"c_w_id", "c_d_id", "c_last", "c_first", "c_id"}, partitions);
         kudu::client::KuduSchemaBuilder schemaBuilder;
 
         addField(schemaBuilder, FieldType::SMALLINT, "c_w_id", true);
@@ -163,20 +168,21 @@ void createCustomer(KuduSession& session, bool useCH) {
         assertOk(schemaBuilder.Build(&schema));
         tableCreator->schema(&schema);
         tableCreator->table_name("c_last_idx");
-        tableCreator->Create();
+        assertOk(tableCreator->Create());
     }
 
     kudu::client::KuduSchema schema;
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("customer");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createHistory(KuduSession& session) {
+void createHistory(KuduSession& session, int partitions) {
     // this one has no primary key
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
     tableCreator->num_replicas(1);
+    tableCreator->add_hash_partitions({"h_ts", "h_c_id", "h_c_d_id", "h_c_w_id"}, partitions);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
     addField(schemaBuilder, FieldType::BIGINT, "h_ts", true);
@@ -194,13 +200,14 @@ void createHistory(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("history");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createNewOrder(KuduSession& session) {
+void createNewOrder(KuduSession& session, int partitions) {
     // Primary key: (no_w_id, no_d_id, no_o_id)
     //              (2 b    , 1 b    , 4 b    )
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+    tableCreator->add_hash_partitions({"no_w_id", "no_d_id", "no_o_id"}, partitions);
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -213,13 +220,14 @@ void createNewOrder(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("new-order");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createOrder(KuduSession& session) {
+void createOrder(KuduSession& session, int partitions) {
     // Primary key: (o_w_id, o_d_id, o_id)
     //              (2 b   , 1 b   , 4 b )
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+    tableCreator->add_hash_partitions({"o_w_id", "o_d_id", "o_id"}, partitions);
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -237,9 +245,10 @@ void createOrder(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("order");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
     {
         std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+        tableCreator->add_hash_partitions({"o_w_id", "o_d_id", "o_c_id", "o_id"}, partitions);
         tableCreator->num_replicas(1);
         kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -253,14 +262,15 @@ void createOrder(KuduSession& session) {
         assertOk(schemaBuilder.Build(&schema));
         tableCreator->schema(&schema);
         tableCreator->table_name("order_idx");
-        tableCreator->Create();
+        assertOk(tableCreator->Create());
     }
 }
 
-void createOrderLine(KuduSession& session) {
+void createOrderLine(KuduSession& session, int partitions) {
     // Primary Key: (ol_w_id, ol_d_id, ol_o_id, ol_number)
     //              (2 b    , 1 b    , 4 b    , 1 b      )
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+    tableCreator->add_hash_partitions({"ol_w_id", "ol_d_id", "ol_o_id", "ol_number"}, partitions);
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -280,13 +290,14 @@ void createOrderLine(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("order-line");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createItem(KuduSession& session) {
+void createItem(KuduSession& session, int partitions) {
     // Primary key: (i_id)
     //              (4 b )
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+    tableCreator->add_hash_partitions({"i_id"}, partitions);
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -301,13 +312,14 @@ void createItem(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("item");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createStock(KuduSession& session, bool useCH) {
+void createStock(KuduSession& session, int partitions, bool useCH) {
     // Primary key: (s_w_id, s_i_id)
     //              ( 2 b  , 4 b   )
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+    tableCreator->add_hash_partitions({"s_w_id", "s_i_id"}, partitions);
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -336,13 +348,14 @@ void createStock(KuduSession& session, bool useCH) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("stock");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createRegion(KuduSession& session) {
+void createRegion(KuduSession& session, int partitions) {
     // Primary key: (r_regionkey)
     //              ( 2 b )
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+    tableCreator->add_hash_partitions({"r_regionkey"}, partitions);
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -355,13 +368,14 @@ void createRegion(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("region");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createNation(KuduSession& session) {
+void createNation(KuduSession& session, int partitions) {
     // Primary key: (r_nationkey)
     //              ( 2 b )
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+    tableCreator->add_hash_partitions({"n_nationkey"}, partitions);
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -375,13 +389,14 @@ void createNation(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("nation");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
-void createSupplier(KuduSession& session) {
+void createSupplier(KuduSession& session, int partitions) {
     // Primary key: (su_suppkey)
     //              ( 2 b )
     std::unique_ptr<kudu::client::KuduTableCreator> tableCreator(session.client()->NewTableCreator());
+    tableCreator->add_hash_partitions({"su_suppkey"}, partitions);
     tableCreator->num_replicas(1);
     kudu::client::KuduSchemaBuilder schemaBuilder;
 
@@ -398,25 +413,25 @@ void createSupplier(KuduSession& session) {
     assertOk(schemaBuilder.Build(&schema));
     tableCreator->schema(&schema);
     tableCreator->table_name("supplier");
-    tableCreator->Create();
+    assertOk(tableCreator->Create());
 }
 
 } // anonymous namespace
 
-void createSchema(kudu::client::KuduSession& session, bool useCH) {
-    createWarehouse(session);
-    createDistrict(session);
-    createCustomer(session, useCH);
-    createHistory(session);
-    createNewOrder(session);
-    createOrder(session);
-    createOrderLine(session);
-    createItem(session);
-    createStock(session, useCH);
+void createSchema(kudu::client::KuduSession& session, int partitions, bool useCH) {
+    createWarehouse(session, partitions);
+    createStock(session, partitions, useCH);
+    createDistrict(session, partitions);
+    createCustomer(session, partitions, useCH);
+    createHistory(session, partitions);
+    createNewOrder(session, partitions);
+    createOrder(session, partitions);
+    createOrderLine(session, partitions);
+    createItem(session, partitions);
     if (useCH) {
-        createRegion(session);
-        createNation(session);
-        createSupplier(session);
+        createRegion(session, partitions);
+        createNation(session, partitions);
+        createSupplier(session, partitions);
     }
 }
 

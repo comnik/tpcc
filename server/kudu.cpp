@@ -85,8 +85,10 @@ public:
 
     template<Command C, class Callback>
     typename std::enable_if<C == Command::CREATE_SCHEMA, void>::type
-    execute(bool args, const Callback& callback) {
-        createSchema(*mSession, mPartitions, args);
+    execute(std::tuple<int16_t, bool> args, const Callback& callback) {
+        std::cout << "CreateSchema(" << std::get<0>(args) << ", " << std::get<1>(args) << ")";
+        std::cout.flush();
+        createSchema(*mSession, std::get<0>(args), mPartitions, std::get<1>(args));
         callback(std::make_tuple(true, crossbow::string()));
     }
 

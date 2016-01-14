@@ -134,8 +134,9 @@ int main(int argc, const char** argv) {
 
         if (populate) {
             auto& cmds = clients[0].commands();
+            std::cout << "numWarehouses=" << numWarehouses << std::endl;
             cmds.execute<tpcc::Command::CREATE_SCHEMA>(
-                    [&clients, &useCHTables](const err_code& ec,
+                    [&clients, &useCHTables, numWarehouses](const err_code& ec,
                         const std::tuple<bool, crossbow::string>& res){
                 if (ec) {
                     LOG_ERROR(ec.message());
@@ -161,7 +162,7 @@ int main(int argc, const char** argv) {
                         client.populate(useCHTables);
                     }
                 }, useCHTables);
-            }, useCHTables);
+            }, std::make_tuple(int16_t(numWarehouses), useCHTables));
         } else {
             for (decltype(clients.size()) i = 0; i < clients.size(); ++i) {
                 auto& client = clients[i];

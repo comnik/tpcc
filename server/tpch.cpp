@@ -843,6 +843,7 @@ int main(int argc, const char* argv[]) {
             //populate.populate(baseDir);
         };
         fibers.emplace_back(clientManager.startTransaction(fun, tell::store::TransactionType::READ_WRITE));
+        fibers.back().wait();
         for (std::string tableName : {"part", "partsupp", "supplier", "customer", "orders", "lineitem", "nation", "region"}) {
             tpch::getFiles(baseDir, tableName, [&fibers, &clientManager, &tableName](const std::string& fName){
                 auto transaction = [tableName, fName](tell::db::Transaction& tx) {

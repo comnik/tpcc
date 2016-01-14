@@ -87,7 +87,7 @@ struct Signature<Command::POPULATE_DIM_TABLES> {
 template<>
 struct Signature<Command::CREATE_SCHEMA> {
     using result = std::tuple<bool, crossbow::string>;
-    using arguments = bool;  // 0: normal TPCC, 1: CHBenchmark (including Suppliers, region, and nation tables)
+    using arguments = std::tuple<int16_t, bool>;  // 0: normal TPCC, 1: CHBenchmark (including Suppliers, region, and nation tables)
 };
 
 template<>

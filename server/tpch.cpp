@@ -432,7 +432,6 @@ struct Populator<Transaction> {
     }
 
     void flush() {
-        tx.unsafeFlush();
     }
 
     void commit() {
@@ -492,16 +491,18 @@ struct TupleWriter<T, 0> {
 };
 
 template<class Tuple, class Fun>
-void getFields(std::istream& in, Fun fun) {
+bool getFields(std::istream& in, Fun fun) {
+    int count = 0;
     std::string line;
     Tuple tuple;
     std::vector<std::string> fields;
     TupleWriter<Tuple, std::tuple_size<Tuple>::value> writer;
-    while (std::getline(in, line)) {
+    while (std::getline(in, line) && ++count <= 10000) {
         std::stringstream ss(line);
         writer(tuple, ss);
         fun(tuple);
     }
+    return count > 10000;
 }
 
 template<class T>
@@ -527,11 +528,11 @@ struct Populate {
         : tx(tx)
     {}
 
-    void populatePart(std::istream& in) {
+    bool populatePart(std::istream& in) {
         using t = std::tuple<int32_t, string, string, string, string, int32_t, string, double, string>;
         P p(tx, "part");
         int count = 0;
-        getFields<t>(in,
+        auto res = getFields<t>(in,
             [&count, &p](const t& fields)
             {
                 p("p_partkey",     std::get<0>(fields));
@@ -548,13 +549,14 @@ struct Populate {
                     p.flush();
             });
         p.flush();
+        return res;
     }
 
-    void populateSupplier(std::istream& in) {
+    bool populateSupplier(std::istream& in) {
         using t = std::tuple<int32_t, string, string, int32_t, string, double, string>;
         P p(tx, "supplier");
         int count = 0;
-        getFields<t>(in,
+        auto res = getFields<t>(in,
                 [&count, &p](const t& fields) {
                     p("s_suppkey",   std::get<0>(fields));
                     p("s_name",      std::get<1>(fields));
@@ -568,13 +570,14 @@ struct Populate {
                         p.flush();
                 });
         p.flush();
+        return res;
     }
 
-    void populatePartsupp(std::istream& in) {
+    bool populatePartsupp(std::istream& in) {
         using t = std::tuple<int32_t, int32_t, int32_t, double, string>;
         P p(tx, "partsupp");
         int count = 0;
-        getFields<t>(in,
+        bool res = getFields<t>(in,
                 [&count, &p](const t& fields) {
                     p("ps_partkey",   std::get<0>(fields));
                     p("ps_suppkey",   std::get<1>(fields));
@@ -586,13 +589,14 @@ struct Populate {
                         p.flush();
                 });
         p.flush();
+        return res;
     }
 
-    void populateCustomer(std::istream& in) {
+    bool populateCustomer(std::istream& in) {
         using t = std::tuple<int32_t, string, string, int32_t, string, double, string, string>;
         P p(tx, "customer");
         int count = 0;
-        getFields<t>(in,
+        auto res = getFields<t>(in,
                 [&count, &p](const t& fields) {
                     p("c_custkey",    std::get<0>(fields));
                     p("c_name",       std::get<1>(fields));
@@ -607,13 +611,14 @@ struct Populate {
                         p.flush();
                 });
         p.flush();
+        return res;
     }
 
-    void populateOrder(std::istream& in) {
+    bool populateOrder(std::istream& in) {
         using t = std::tuple<int32_t, int32_t, string, double, date, string, string, int32_t, string>;
         P p(tx, "orders");
         int count = 0;
-        getFields<t>(in,
+        auto res = getFields<t>(in,
                 [&count, &p](const t& fields) {
                     p("o_orderkey",     std::get<0>(fields));
                     p("o_custkey",      std::get<1>(fields));
@@ -629,13 +634,14 @@ struct Populate {
                         p.flush();
                 });
         p.flush();
+        return res;
     }
 
-    void populateLineitem(std::istream& in) {
+    bool populateLineitem(std::istream& in) {
         using t = std::tuple<int32_t, int32_t, int32_t, int32_t, double, double, double, double, string, string, date, date, date, string, string, string>;
         P p(tx, "lineitem");
         int count = 0;
-        getFields<t>(in,
+        auto res = getFields<t>(in,
                 [&count, &p](const t& fields) {
                     p("l_orderkey",      std::get<0>(fields));
                     p("l_partkey",       std::get<1>(fields));
@@ -660,13 +666,14 @@ struct Populate {
                         p.flush();
                 });
         p.flush();
+        return res;
     }
 
-    void populateNation(std::istream& in) {
+    bool populateNation(std::istream& in) {
         using t = std::tuple<int32_t, string, int32_t, string>;
         P p(tx, "nation");
         int count = 0;
-        getFields<t>(in,
+        auto res = getFields<t>(in,
                 [&count, &p](const t& fields) {
                     p("n_nationkey", std::get<0>(fields));
                     p("n_name",      std::get<1>(fields));
@@ -677,13 +684,14 @@ struct Populate {
                         p.flush();
                 });
         p.flush();
+        return res;
     }
 
-    void populateRegion(std::istream& in) {
+    bool populateRegion(std::istream& in) {
         using t = std::tuple<int32_t, string, string>;
         P p(tx, "region");
         int count = 0;
-        getFields<t>(in,
+        auto res = getFields<t>(in,
                 [&count, &p](const t& fields) {
                     p("r_regionkey", std::get<0>(fields));
                     p("r_name",      std::get<1>(fields));
@@ -693,42 +701,9 @@ struct Populate {
                         p.flush();
                 });
         p.flush();
+        return res;
     }
 
-    void populate(const std::string& basedir) {
-        {
-            std::fstream in((basedir + "/part.tbl").c_str(), std::ios_base::in);
-            populatePart(in);
-        }
-        {
-            std::fstream in((basedir + "/partsupp.tbl").c_str(), std::ios_base::in);
-            populatePartsupp(in);
-        }
-        {
-            std::fstream in((basedir + "/supplier.tbl").c_str(), std::ios_base::in);
-            populateSupplier(in);
-        }
-        {
-            std::fstream in((basedir + "/customer.tbl").c_str(), std::ios_base::in);
-            populateCustomer(in);
-        }
-        {
-            std::fstream in((basedir + "/orders.tbl").c_str(), std::ios_base::in);
-            populateOrder(in);
-        }
-        {
-            std::fstream in((basedir + "/lineitem.tbl").c_str(), std::ios_base::in);
-            populateLineitem(in);
-        }
-        {
-            std::fstream in((basedir + "/nation.tbl").c_str(), std::ios_base::in);
-            populateNation(in);
-        }
-        {
-            std::fstream in((basedir + "/region.tbl").c_str(), std::ios_base::in);
-            populateRegion(in);
-        }
-    }
 };
 
 template struct Populate<Transaction>;
@@ -837,41 +812,44 @@ int main(int argc, const char* argv[]) {
         tell::db::ClientManager<void> clientManager(clientConfig);
         std::vector<tell::db::TransactionFiber<void>> fibers;
         auto fun = [&baseDir](tell::db::Transaction& tx){
-            tx.unsafeNoUndoLog();
             tpch::createSchema(tx);
             tpch::Populate<tell::db::Transaction> populate(tx);
-            //populate.populate(baseDir);
+            tx.commit();
         };
         fibers.emplace_back(clientManager.startTransaction(fun, tell::store::TransactionType::READ_WRITE));
         fibers.back().wait();
         for (std::string tableName : {"part", "partsupp", "supplier", "customer", "orders", "lineitem", "nation", "region"}) {
             tpch::getFiles(baseDir, tableName, [&fibers, &clientManager, &tableName](const std::string& fName){
-                auto transaction = [tableName, fName](tell::db::Transaction& tx) {
-                    std::fstream in(fName.c_str(), std::ios_base::in);
-                    tpch::Populate<tell::db::Transaction> populate(tx);
-                    if (tableName == "part") {
-                        populate.populatePart(in);
-                    } else if (tableName == "partsupp") {
-                        populate.populatePartsupp(in);
-                    } else if (tableName == "supplier") {
-                        populate.populateSupplier(in);
-                    } else if (tableName == "customer") {
-                        populate.populateCustomer(in);
-                    } else if (tableName == "orders") {
-                        populate.populateOrder(in);
-                    } else if (tableName == "lineitem") {
-                        populate.populateLineitem(in);
-                    } else if (tableName == "nation") {
-                        populate.populateNation(in);
-                    } else if (tableName == "region") {
-                        populate.populateRegion(in);
-                    } else {
-                        std::cerr << "Table " << tableName << " does not exist" << std::endl;
-                        std::terminate();
-                    }
-                    tx.commit();
-                };
-                fibers.emplace_back(clientManager.startTransaction(transaction, tell::store::TransactionType::READ_WRITE));
+                std::fstream in(fName.c_str(), std::ios_base::in);
+                bool done = false;
+                while (!done) {
+                    auto transaction = [tableName, fName, &in, &done](tell::db::Transaction& tx) {
+                        tpch::Populate<tell::db::Transaction> populate(tx);
+                        if (tableName == "part") {
+                            done = populate.populatePart(in);
+                        } else if (tableName == "partsupp") {
+                            done = populate.populatePartsupp(in);
+                        } else if (tableName == "supplier") {
+                            done = populate.populateSupplier(in);
+                        } else if (tableName == "customer") {
+                            done = populate.populateCustomer(in);
+                        } else if (tableName == "orders") {
+                            done = populate.populateOrder(in);
+                        } else if (tableName == "lineitem") {
+                            done = populate.populateLineitem(in);
+                        } else if (tableName == "nation") {
+                            done = populate.populateNation(in);
+                        } else if (tableName == "region") {
+                            done = populate.populateRegion(in);
+                        } else {
+                            std::cerr << "Table " << tableName << " does not exist" << std::endl;
+                            std::terminate();
+                        }
+                        tx.commit();
+                    };
+                    auto f = clientManager.startTransaction(transaction, tell::store::TransactionType::READ_WRITE);
+                    f.wait();
+                }
             });
         }
         for (auto& f : fibers) {

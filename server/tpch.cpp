@@ -821,6 +821,7 @@ int main(int argc, const char* argv[]) {
         for (std::string tableName : {"part", "partsupp", "supplier", "customer", "orders", "lineitem", "nation", "region"}) {
             tpch::getFiles(baseDir, tableName, [&fibers, &clientManager, &tableName](const std::string& fName){
                 std::fstream in(fName.c_str(), std::ios_base::in);
+                std::cout << "Writing " << fName << std::endl;
                 bool done = false;
                 while (!done) {
                     auto transaction = [tableName, fName, &in, &done](tell::db::Transaction& tx) {
@@ -850,6 +851,7 @@ int main(int argc, const char* argv[]) {
                     auto f = clientManager.startTransaction(transaction, tell::store::TransactionType::READ_WRITE);
                     f.wait();
                 }
+                std::cout << "Done" << std::endl;
             });
         }
         for (auto& f : fibers) {

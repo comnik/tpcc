@@ -497,12 +497,14 @@ bool getFields(std::istream& in, Fun fun) {
     Tuple tuple;
     std::vector<std::string> fields;
     TupleWriter<Tuple, std::tuple_size<Tuple>::value> writer;
-    while (std::getline(in, line) && ++count <= 10000) {
+    while (std::getline(in, line)) {
+        if (++count > 10000)
+            return false;
         std::stringstream ss(line);
         writer(tuple, ss);
         fun(tuple);
     }
-    return count > 10000;
+    return true;
 }
 
 template<class T>
@@ -847,11 +849,13 @@ int main(int argc, const char* argv[]) {
                             std::terminate();
                         }
                         tx.commit();
+                        std::cout << '.';
+                        std::cout.flush();
                     };
                     auto f = clientManager.startTransaction(transaction, tell::store::TransactionType::READ_WRITE);
                     f.wait();
                 }
-                std::cout << "Done" << std::endl;
+                std::cout << std::endl << "Done" << std::endl;
             });
         }
         for (auto& f : fibers) {

@@ -369,6 +369,8 @@ struct Populator<KuduSession> {
         assertOk(session.Apply(ins.release()));
         ins.reset(table->NewInsert());
         row = ins->mutable_row();
+        names.clear();
+        vals.clear();
     }
 
     void flush() {
@@ -429,6 +431,7 @@ struct Populator<Transaction> {
 
     void apply(uint64_t key) {
         tx.insert(tableId, tell::db::key_t{key}, fields);
+        fields.clear();
     }
 
     void flush() {

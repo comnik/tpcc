@@ -664,8 +664,8 @@ struct Populate {
                     p("l_shipinstruct",  std::get<13>(fields));
                     p("l_shipmode",      std::get<14>(fields));
                     p("l_comment",       std::get<15>(fields));
-                    uint64_t key = uint64_t(std::get<0>(fields)) << 32;
-                    key |= uint64_t(std::get<3>(fields));
+                    uint64_t key = uint64_t(std::get<3>(fields)) << 32;
+                    key |= uint64_t(std::get<0>(fields));
                     p.apply(key);
                     if (++count % 1000 == 0)
                         p.flush();

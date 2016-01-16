@@ -498,11 +498,11 @@ bool getFields(std::istream& in, Fun fun) {
     std::vector<std::string> fields;
     TupleWriter<Tuple, std::tuple_size<Tuple>::value> writer;
     while (std::getline(in, line)) {
-        if (++count > 10000)
-            return false;
         std::stringstream ss(line);
         writer(tuple, ss);
         fun(tuple);
+        if (++count > 10000)
+            return false;
     }
     return true;
 }

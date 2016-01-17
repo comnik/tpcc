@@ -25,6 +25,8 @@
 #include <sstream>
 #include <fstream>
 #include <iomanip>
+#include <sstream>
+#include <memory>
 
 #include <boost/lexical_cast.hpp>
 #include <boost/date_time.hpp>
@@ -495,17 +497,13 @@ struct TupleWriter<T, 0> {
 
 template<class Tuple, class Fun>
 bool getFields(std::istream& in, Fun fun) {
-    int count = 0;
     std::string line;
     Tuple tuple;
-    std::vector<std::string> fields;
     TupleWriter<Tuple, std::tuple_size<Tuple>::value> writer;
     while (std::getline(in, line)) {
         std::stringstream ss(line);
         writer(tuple, ss);
         fun(tuple);
-        if (++count > 10000)
-            return false;
     }
     return true;
 }
@@ -589,7 +587,7 @@ struct Populate {
                     p("ps_availqty",  std::get<2>(fields));
                     p("ps_supplycost",std::get<3>(fields));
                     p("ps_comment",   std::get<4>(fields));
-                    p.apply((uint64_t(std::get<0>(fields)) << 32 | uint64_t(std::get<1>(fields))));
+                    p.apply((uint64_t(std::get<1>(fields)) << 32 | uint64_t(std::get<0>(fields))));
                     if (++count % 1000 == 0)
                         p.flush();
                 });
@@ -810,43 +808,60 @@ int main(int argc, const char* argv[]) {
         for (auto& t : threads) {
             t.join();
         }
+        std::cout << "DONE\n";
+        std::cout << '\a';
     } else {
         tell::store::ClientConfig clientConfig;
         clientConfig.tellStore = clientConfig.parseTellStore(storage);
         clientConfig.commitManager = crossbow::infinio::Endpoint(crossbow::infinio::Endpoint::ipv4(), commitManager.c_str());
+        clientConfig.numNetworkThreads = 4;
         tell::db::ClientManager<void> clientManager(clientConfig);
-        std::vector<tell::db::TransactionFiber<void>> fibers;
-        auto fun = [&baseDir](tell::db::Transaction& tx){
+
+        auto createSchema = clientManager.startTransaction([] (tell::db::Transaction& tx) {
             tpch::createSchema(tx);
-            tpch::Populate<tell::db::Transaction> populate(tx);
             tx.commit();
-        };
-        fibers.emplace_back(clientManager.startTransaction(fun, tell::store::TransactionType::READ_WRITE));
-        fibers.back().wait();
+        });
+        createSchema.wait();
+
         for (std::string tableName : {"part", "partsupp", "supplier", "customer", "orders", "lineitem", "nation", "region"}) {
-            tpch::getFiles(baseDir, tableName, [&fibers, &clientManager, &tableName](const std::string& fName){
-                std::fstream in(fName.c_str(), std::ios_base::in);
-                std::cout << "Writing " << fName << std::endl;
-                bool done = false;
-                while (!done) {
-                    auto transaction = [tableName, fName, &in, &done](tell::db::Transaction& tx) {
+            tpch::getFiles(baseDir, tableName, [&clientManager, &tableName] (const std::string& fileName) {
+                std::cout << "Reading " << fileName << std::endl;
+                std::fstream in(fileName.c_str(), std::ios_base::in);
+                std::string line;
+
+                std::queue<tell::db::TransactionFiber<void>> fibers;
+                while (true) {
+                    auto data = std::make_shared<std::stringstream>();
+                    int count = 0;
+                    while (std::getline(in, line) && count < 10000) {
+                        *data << line << '\n';
+                        ++count;
+                    }
+                    if (count == 0) {
+                        break;
+                    }
+                    if (fibers.size() >= 16) {
+                        fibers.front().wait();
+                        fibers.pop();
+                    }
+                    fibers.emplace(clientManager.startTransaction([&tableName, data] (tell::db::Transaction& tx) {
                         tpch::Populate<tell::db::Transaction> populate(tx);
                         if (tableName == "part") {
-                            done = populate.populatePart(in);
+                            populate.populatePart(*data);
                         } else if (tableName == "partsupp") {
-                            done = populate.populatePartsupp(in);
+                            populate.populatePartsupp(*data);
                         } else if (tableName == "supplier") {
-                            done = populate.populateSupplier(in);
+                            populate.populateSupplier(*data);
                         } else if (tableName == "customer") {
-                            done = populate.populateCustomer(in);
+                            populate.populateCustomer(*data);
                         } else if (tableName == "orders") {
-                            done = populate.populateOrder(in);
+                            populate.populateOrder(*data);
                         } else if (tableName == "lineitem") {
-                            done = populate.populateLineitem(in);
+                            populate.populateLineitem(*data);
                         } else if (tableName == "nation") {
-                            done = populate.populateNation(in);
+                            populate.populateNation(*data);
                         } else if (tableName == "region") {
-                            done = populate.populateRegion(in);
+                            populate.populateRegion(*data);
                         } else {
                             std::cerr << "Table " << tableName << " does not exist" << std::endl;
                             std::terminate();
@@ -854,18 +869,19 @@ int main(int argc, const char* argv[]) {
                         tx.commit();
                         std::cout << '.';
                         std::cout.flush();
-                    };
-                    auto f = clientManager.startTransaction(transaction, tell::store::TransactionType::READ_WRITE);
-                    f.wait();
+                    }));
                 }
+                while (!fibers.empty()) {
+                    fibers.front().wait();
+                    fibers.pop();
+                }
+
                 std::cout << std::endl << "Done" << std::endl;
             });
         }
-        for (auto& f : fibers) {
-            f.wait();
-        }
+        std::cout << "DONE\n";
+        std::cout << '\a';
     }
-    std::cout << "DONE\n";
     return 0;
 }
 

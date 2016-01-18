@@ -496,7 +496,7 @@ struct TupleWriter<T, 0> {
 };
 
 template<class Tuple, class Fun>
-bool getFields(std::istream& in, Fun fun) {
+void getFields(std::istream& in, Fun fun) {
     std::string line;
     Tuple tuple;
     TupleWriter<Tuple, std::tuple_size<Tuple>::value> writer;
@@ -505,7 +505,6 @@ bool getFields(std::istream& in, Fun fun) {
         writer(tuple, ss);
         fun(tuple);
     }
-    return true;
 }
 
 template<class T>
@@ -531,182 +530,162 @@ struct Populate {
         : tx(tx)
     {}
 
-    bool populatePart(std::istream& in) {
+    void populatePart(std::istream& in, uint64_t startKey) {
         using t = std::tuple<int32_t, string, string, string, string, int32_t, string, double, string>;
         P p(tx, "part");
-        int count = 0;
-        auto res = getFields<t>(in,
-            [&count, &p](const t& fields)
-            {
-                p("p_partkey",     std::get<0>(fields));
-                p("p_name",        std::get<1>(fields));
-                p("p_mfgr",        std::get<2>(fields));
-                p("p_brand",       std::get<3>(fields));
-                p("p_type",        std::get<4>(fields));
-                p("p_size",        std::get<5>(fields));
-                p("p_container",   std::get<6>(fields));
-                p("p_retailprice", std::get<7>(fields));
-                p("p_comment",     std::get<8>(fields));
-                p.apply(uint64_t(std::get<0>(fields)));
-                if (++count % 1000 == 0)
-                    p.flush();
-            });
+        uint64_t count = 0;
+        getFields<t>(in, [&count, &p, startKey] (const t& fields) {
+            p("p_partkey",     std::get<0>(fields));
+            p("p_name",        std::get<1>(fields));
+            p("p_mfgr",        std::get<2>(fields));
+            p("p_brand",       std::get<3>(fields));
+            p("p_type",        std::get<4>(fields));
+            p("p_size",        std::get<5>(fields));
+            p("p_container",   std::get<6>(fields));
+            p("p_retailprice", std::get<7>(fields));
+            p("p_comment",     std::get<8>(fields));
+            p.apply(startKey + count);
+            if (++count % 1000u == 0u)
+                p.flush();
+        });
         p.flush();
-        return res;
     }
 
-    bool populateSupplier(std::istream& in) {
+    void populateSupplier(std::istream& in, uint64_t startKey) {
         using t = std::tuple<int32_t, string, string, int32_t, string, double, string>;
         P p(tx, "supplier");
-        int count = 0;
-        auto res = getFields<t>(in,
-                [&count, &p](const t& fields) {
-                    p("s_suppkey",   std::get<0>(fields));
-                    p("s_name",      std::get<1>(fields));
-                    p("s_address",   std::get<2>(fields));
-                    p("s_nationkey", std::get<3>(fields));
-                    p("s_phone",     std::get<4>(fields));
-                    p("s_acctbal",   std::get<5>(fields));
-                    p("s_comment",   std::get<6>(fields));
-                    p.apply(std::get<0>(fields));
-                    if (++count % 1000 == 0)
-                        p.flush();
-                });
+        uint64_t count = 0;
+        getFields<t>(in, [&count, &p, startKey] (const t& fields) {
+            p("s_suppkey",   std::get<0>(fields));
+            p("s_name",      std::get<1>(fields));
+            p("s_address",   std::get<2>(fields));
+            p("s_nationkey", std::get<3>(fields));
+            p("s_phone",     std::get<4>(fields));
+            p("s_acctbal",   std::get<5>(fields));
+            p("s_comment",   std::get<6>(fields));
+            p.apply(startKey + count);
+            if (++count % 1000 == 0)
+                p.flush();
+        });
         p.flush();
-        return res;
     }
 
-    bool populatePartsupp(std::istream& in) {
+    void populatePartsupp(std::istream& in, uint64_t startKey) {
         using t = std::tuple<int32_t, int32_t, int32_t, double, string>;
         P p(tx, "partsupp");
-        int count = 0;
-        bool res = getFields<t>(in,
-                [&count, &p](const t& fields) {
-                    p("ps_partkey",   std::get<0>(fields));
-                    p("ps_suppkey",   std::get<1>(fields));
-                    p("ps_availqty",  std::get<2>(fields));
-                    p("ps_supplycost",std::get<3>(fields));
-                    p("ps_comment",   std::get<4>(fields));
-                    p.apply((uint64_t(std::get<1>(fields)) << 32 | uint64_t(std::get<0>(fields))));
-                    if (++count % 1000 == 0)
-                        p.flush();
-                });
+        uint64_t count = 0;
+        getFields<t>(in, [&count, &p, startKey] (const t& fields) {
+            p("ps_partkey",   std::get<0>(fields));
+            p("ps_suppkey",   std::get<1>(fields));
+            p("ps_availqty",  std::get<2>(fields));
+            p("ps_supplycost",std::get<3>(fields));
+            p("ps_comment",   std::get<4>(fields));
+            p.apply(startKey + count);
+            if (++count % 1000 == 0)
+                p.flush();
+        });
         p.flush();
-        return res;
     }
 
-    bool populateCustomer(std::istream& in) {
+    void populateCustomer(std::istream& in, uint64_t startKey) {
         using t = std::tuple<int32_t, string, string, int32_t, string, double, string, string>;
         P p(tx, "customer");
-        int count = 0;
-        auto res = getFields<t>(in,
-                [&count, &p](const t& fields) {
-                    p("c_custkey",    std::get<0>(fields));
-                    p("c_name",       std::get<1>(fields));
-                    p("c_address",    std::get<2>(fields));
-                    p("c_nationkey",  std::get<3>(fields));
-                    p("c_phone",      std::get<4>(fields));
-                    p("c_acctbal",    std::get<5>(fields));
-                    p("c_mktsegment", std::get<6>(fields));
-                    p("c_comment",    std::get<7>(fields));
-                    p.apply(std::get<0>(fields));
-                    if (++count % 1000 == 0)
-                        p.flush();
-                });
+        uint64_t count = 0;
+        getFields<t>(in, [&count, &p, startKey] (const t& fields) {
+            p("c_custkey",    std::get<0>(fields));
+            p("c_name",       std::get<1>(fields));
+            p("c_address",    std::get<2>(fields));
+            p("c_nationkey",  std::get<3>(fields));
+            p("c_phone",      std::get<4>(fields));
+            p("c_acctbal",    std::get<5>(fields));
+            p("c_mktsegment", std::get<6>(fields));
+            p("c_comment",    std::get<7>(fields));
+            p.apply(startKey + count);
+            if (++count % 1000 == 0)
+                p.flush();
+        });
         p.flush();
-        return res;
     }
 
-    bool populateOrder(std::istream& in) {
+    void populateOrder(std::istream& in, uint64_t startKey) {
         using t = std::tuple<int32_t, int32_t, string, double, date, string, string, int32_t, string>;
         P p(tx, "orders");
-        int count = 0;
-        auto res = getFields<t>(in,
-                [&count, &p](const t& fields) {
-                    p("o_orderkey",     std::get<0>(fields));
-                    p("o_custkey",      std::get<1>(fields));
-                    p("o_orderstatus",  std::get<2>(fields));
-                    p("o_totalprice",   std::get<3>(fields));
-                    p("o_orderdate",    std::get<4>(fields));
-                    p("o_orderpriority",std::get<5>(fields));
-                    p("o_clerk",        std::get<6>(fields));
-                    p("o_shippriority", std::get<7>(fields));
-                    p("o_comment",      std::get<8>(fields));
-                    p.apply(std::get<0>(fields));
-                    if (++count % 1000 == 0)
-                        p.flush();
-                });
+        uint64_t count = 0;
+        getFields<t>(in, [&count, &p, startKey] (const t& fields) {
+            p("o_orderkey",     std::get<0>(fields));
+            p("o_custkey",      std::get<1>(fields));
+            p("o_orderstatus",  std::get<2>(fields));
+            p("o_totalprice",   std::get<3>(fields));
+            p("o_orderdate",    std::get<4>(fields));
+            p("o_orderpriority",std::get<5>(fields));
+            p("o_clerk",        std::get<6>(fields));
+            p("o_shippriority", std::get<7>(fields));
+            p("o_comment",      std::get<8>(fields));
+            p.apply(startKey + count);
+            if (++count % 1000 == 0)
+                p.flush();
+        });
         p.flush();
-        return res;
     }
 
-    bool populateLineitem(std::istream& in) {
+    void populateLineitem(std::istream& in, uint64_t startKey) {
         using t = std::tuple<int32_t, int32_t, int32_t, int32_t, double, double, double, double, string, string, date, date, date, string, string, string>;
         P p(tx, "lineitem");
-        int count = 0;
-        auto res = getFields<t>(in,
-                [&count, &p](const t& fields) {
-                    p("l_orderkey",      std::get<0>(fields));
-                    p("l_partkey",       std::get<1>(fields));
-                    p("l_suppkey",       std::get<2>(fields));
-                    p("l_linenumber",    std::get<3>(fields));
-                    p("l_quantity",      std::get<4>(fields));
-                    p("l_extendedprice", std::get<5>(fields));
-                    p("l_discount",      std::get<6>(fields));
-                    p("l_tax",           std::get<7>(fields));
-                    p("l_returnflag",    std::get<8>(fields));
-                    p("l_linestatus",    std::get<9>(fields));
-                    p("l_shipdate",      std::get<10>(fields));
-                    p("l_commitdate",    std::get<11>(fields));
-                    p("l_receiptdate",   std::get<12>(fields));
-                    p("l_shipinstruct",  std::get<13>(fields));
-                    p("l_shipmode",      std::get<14>(fields));
-                    p("l_comment",       std::get<15>(fields));
-                    uint64_t key = uint64_t(std::get<3>(fields)) << 32;
-                    key |= uint64_t(std::get<0>(fields));
-                    p.apply(key);
-                    if (++count % 1000 == 0)
-                        p.flush();
-                });
+        uint64_t count = 0;
+        getFields<t>(in, [&count, &p, startKey] (const t& fields) {
+            p("l_orderkey",      std::get<0>(fields));
+            p("l_partkey",       std::get<1>(fields));
+            p("l_suppkey",       std::get<2>(fields));
+            p("l_linenumber",    std::get<3>(fields));
+            p("l_quantity",      std::get<4>(fields));
+            p("l_extendedprice", std::get<5>(fields));
+            p("l_discount",      std::get<6>(fields));
+            p("l_tax",           std::get<7>(fields));
+            p("l_returnflag",    std::get<8>(fields));
+            p("l_linestatus",    std::get<9>(fields));
+            p("l_shipdate",      std::get<10>(fields));
+            p("l_commitdate",    std::get<11>(fields));
+            p("l_receiptdate",   std::get<12>(fields));
+            p("l_shipinstruct",  std::get<13>(fields));
+            p("l_shipmode",      std::get<14>(fields));
+            p("l_comment",       std::get<15>(fields));
+            p.apply(startKey + count);
+            if (++count % 1000 == 0)
+                p.flush();
+        });
         p.flush();
-        return res;
     }
 
-    bool populateNation(std::istream& in) {
+    void populateNation(std::istream& in, uint64_t startKey) {
         using t = std::tuple<int32_t, string, int32_t, string>;
         P p(tx, "nation");
-        int count = 0;
-        auto res = getFields<t>(in,
-                [&count, &p](const t& fields) {
-                    p("n_nationkey", std::get<0>(fields));
-                    p("n_name",      std::get<1>(fields));
-                    p("n_regionkey", std::get<2>(fields));
-                    p("n_comment",   std::get<3>(fields));
-                    p.apply(std::get<0>(fields));
-                    if (++count % 1000 == 0)
-                        p.flush();
-                });
+        uint64_t count = 0;
+        getFields<t>(in, [&count, &p, startKey] (const t& fields) {
+            p("n_nationkey", std::get<0>(fields));
+            p("n_name",      std::get<1>(fields));
+            p("n_regionkey", std::get<2>(fields));
+            p("n_comment",   std::get<3>(fields));
+            p.apply(startKey + count);
+            if (++count % 1000 == 0)
+                p.flush();
+        });
         p.flush();
-        return res;
     }
 
-    bool populateRegion(std::istream& in) {
+    void populateRegion(std::istream& in, uint64_t startKey) {
         using t = std::tuple<int32_t, string, string>;
         P p(tx, "region");
-        int count = 0;
-        auto res = getFields<t>(in,
-                [&count, &p](const t& fields) {
-                    p("r_regionkey", std::get<0>(fields));
-                    p("r_name",      std::get<1>(fields));
-                    p("r_comment",   std::get<2>(fields));
-                    p.apply(std::get<0>(fields));
-                    if (++count % 1000 == 0)
-                        p.flush();
-                });
+        uint64_t count = 0;
+        getFields<t>(in, [&count, &p, startKey] (const t& fields) {
+            p("r_regionkey", std::get<0>(fields));
+            p("r_name",      std::get<1>(fields));
+            p("r_comment",   std::get<2>(fields));
+            p.apply(startKey + count);
+            if (++count % 1000 == 0)
+                p.flush();
+        });
         p.flush();
-        return res;
     }
-
 };
 
 template struct Populate<Transaction>;
@@ -771,50 +750,73 @@ int main(int argc, const char* argv[]) {
         session->SetTimeoutMillis(60000);
         tpch::createSchema(*session);
         tpch::assertOk(session->Close());
-        std::vector<std::thread> threads;
         for (std::string tableName : {"part", "partsupp", "supplier", "customer", "orders", "lineitem", "nation", "region"}) {
-            tpch::getFiles(baseDir, tableName, [&threads, &client, &tableName](const std::string& fName){
-                threads.emplace_back([fName, &client, tableName](){
-                    std::fstream in(fName.c_str(), std::ios_base::in);
-                    auto session = client->NewSession();
-                    tpch::assertOk(session->SetFlushMode(kudu::client::KuduSession::MANUAL_FLUSH));
-                    session->SetTimeoutMillis(60000);
-                    tpch::Populate<kudu::client::KuduSession> populate(*session);
-                    if (tableName == "part") {
-                        populate.populatePart(in);
-                    } else if (tableName == "partsupp") {
-                        populate.populatePartsupp(in);
-                    } else if (tableName == "supplier") {
-                        populate.populateSupplier(in);
-                    } else if (tableName == "customer") {
-                        populate.populateCustomer(in);
-                    } else if (tableName == "orders") {
-                        populate.populateOrder(in);
-                    } else if (tableName == "lineitem") {
-                        populate.populateLineitem(in);
-                    } else if (tableName == "nation") {
-                        populate.populateNation(in);
-                    } else if (tableName == "region") {
-                        populate.populateRegion(in);
-                    } else {
-                        std::cerr << "Table " << tableName << " does not exist" << std::endl;
-                        std::terminate();
+            tpch::getFiles(baseDir, tableName, [&client, &tableName] (const std::string& fileName) {
+                std::cout << "Reading " << fileName << std::endl;
+                std::fstream in(fileName.c_str(), std::ios_base::in);
+                std::string line;
+
+                std::queue<std::thread> threads;
+                uint64_t startKey = 0;
+                while (true) {
+                    auto data = std::make_shared<std::stringstream>();
+                    uint64_t count = 0;
+                    while (std::getline(in, line) && count < 10000) {
+                        *data << line << '\n';
+                        ++count;
                     }
-                    tpch::assertOk(session->Flush());
-                    tpch::assertOk(session->Close());
-                });
+                    if (count == 0) {
+                        break;
+                    }
+                    if (threads.size() >= 8) {
+                        threads.front().join();
+                        threads.pop();
+                    }
+                    threads.emplace([&client, &tableName, data, startKey] () {
+                        auto session = client->NewSession();
+                        tpch::assertOk(session->SetFlushMode(kudu::client::KuduSession::MANUAL_FLUSH));
+                        session->SetTimeoutMillis(60000);
+                        tpch::Populate<kudu::client::KuduSession> populate(*session);
+                        if (tableName == "part") {
+                            populate.populatePart(*data, startKey);
+                        } else if (tableName == "partsupp") {
+                            populate.populatePartsupp(*data, startKey);
+                        } else if (tableName == "supplier") {
+                            populate.populateSupplier(*data, startKey);
+                        } else if (tableName == "customer") {
+                            populate.populateCustomer(*data, startKey);
+                        } else if (tableName == "orders") {
+                            populate.populateOrder(*data, startKey);
+                        } else if (tableName == "lineitem") {
+                            populate.populateLineitem(*data, startKey);
+                        } else if (tableName == "nation") {
+                            populate.populateNation(*data, startKey);
+                        } else if (tableName == "region") {
+                            populate.populateRegion(*data, startKey);
+                        } else {
+                            std::cerr << "Table " << tableName << " does not exist" << std::endl;
+                            std::terminate();
+                        }
+                        tpch::assertOk(session->Flush());
+                        tpch::assertOk(session->Close());
+                    });
+                    startKey += count;
+                }
+                while (!threads.empty()) {
+                    threads.front().join();
+                    threads.pop();
+                }
+
+                std::cout << std::endl << std::endl;
             });
         }
-        for (auto& t : threads) {
-            t.join();
-        }
-        std::cout << "DONE\n";
+        std::cout << "Done" << std::endl;
         std::cout << '\a';
     } else {
         tell::store::ClientConfig clientConfig;
         clientConfig.tellStore = clientConfig.parseTellStore(storage);
         clientConfig.commitManager = crossbow::infinio::Endpoint(crossbow::infinio::Endpoint::ipv4(), commitManager.c_str());
-        clientConfig.numNetworkThreads = 4;
+        clientConfig.numNetworkThreads = 7;
         tell::db::ClientManager<void> clientManager(clientConfig);
 
         auto createSchema = clientManager.startTransaction([] (tell::db::Transaction& tx) {
@@ -830,9 +832,10 @@ int main(int argc, const char* argv[]) {
                 std::string line;
 
                 std::queue<tell::db::TransactionFiber<void>> fibers;
+                uint64_t startKey = 0;
                 while (true) {
                     auto data = std::make_shared<std::stringstream>();
-                    int count = 0;
+                    uint64_t count = 0;
                     while (std::getline(in, line) && count < 10000) {
                         *data << line << '\n';
                         ++count;
@@ -840,28 +843,28 @@ int main(int argc, const char* argv[]) {
                     if (count == 0) {
                         break;
                     }
-                    if (fibers.size() >= 16) {
+                    if (fibers.size() >= 28) {
                         fibers.front().wait();
                         fibers.pop();
                     }
-                    fibers.emplace(clientManager.startTransaction([&tableName, data] (tell::db::Transaction& tx) {
+                    fibers.emplace(clientManager.startTransaction([&tableName, data, startKey] (tell::db::Transaction& tx) {
                         tpch::Populate<tell::db::Transaction> populate(tx);
                         if (tableName == "part") {
-                            populate.populatePart(*data);
+                            populate.populatePart(*data, startKey);
                         } else if (tableName == "partsupp") {
-                            populate.populatePartsupp(*data);
+                            populate.populatePartsupp(*data, startKey);
                         } else if (tableName == "supplier") {
-                            populate.populateSupplier(*data);
+                            populate.populateSupplier(*data, startKey);
                         } else if (tableName == "customer") {
-                            populate.populateCustomer(*data);
+                            populate.populateCustomer(*data, startKey);
                         } else if (tableName == "orders") {
-                            populate.populateOrder(*data);
+                            populate.populateOrder(*data, startKey);
                         } else if (tableName == "lineitem") {
-                            populate.populateLineitem(*data);
+                            populate.populateLineitem(*data, startKey);
                         } else if (tableName == "nation") {
-                            populate.populateNation(*data);
+                            populate.populateNation(*data, startKey);
                         } else if (tableName == "region") {
-                            populate.populateRegion(*data);
+                            populate.populateRegion(*data, startKey);
                         } else {
                             std::cerr << "Table " << tableName << " does not exist" << std::endl;
                             std::terminate();
@@ -870,16 +873,17 @@ int main(int argc, const char* argv[]) {
                         std::cout << '.';
                         std::cout.flush();
                     }));
+                    startKey += count;
                 }
                 while (!fibers.empty()) {
                     fibers.front().wait();
                     fibers.pop();
                 }
 
-                std::cout << std::endl << "Done" << std::endl;
+                std::cout << std::endl << std::endl;
             });
         }
-        std::cout << "DONE\n";
+        std::cout << "Done" << std::endl;
         std::cout << '\a';
     }
     return 0;

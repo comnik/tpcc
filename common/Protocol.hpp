@@ -62,13 +62,6 @@ namespace tpcc {
 
 GEN_COMMANDS(Command, COMMANDS);
 
-//enum class Command {
-//    POPULATE_WAREHOUSE = 1,
-//    CREATE_SCHEMA,
-//    NEW_ORDER,
-//    PAYMENT
-//};
-
 template<Command C>
 struct Signature;
 

@@ -1,5 +1,5 @@
 # tpcc
-A TPC-C implementation to benchmark Tell
+This is a TPC-C implementation to benchmark TellStore and Kudu.
 
 ## Building
 First, build [Tell](https://github.com/tellproject/tell). Then, clone then newest version of the TPC-C benchmark and build Tell again. This will also build the TPC-C benchmark:
@@ -30,7 +30,7 @@ watch/tpcc/tpcc_server -h
 watch/tpcc/tpcc_kudu -h
 ```
 
-### Clients
+### Client
 The TPC-C client uses a TCP connection to send transaction requests to a TPC-C server. It writes a log file in CSV format where it logs every transaction that was executed with transaction type, start time, end time (both in millisecs and relative to the beginning of the experiment) as well as whether the transaction was successfully commited or not. This log file can then be grepped in order to compute some other useful statistics (like e.g. TpmC). The client can connect to server(s) regardless of the used storage backend. You can find out about the commandline options for the client by typing:
 
 ```bash

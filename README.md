@@ -20,7 +20,7 @@ If you want to run the TPC-C Benchmark not only on Tell, but also on [Kudu](http
 ```
 
 ## Running
-The simplest way to run the benchmark is to use the [Python Helper Scripts](https://github.com/tellproject/helper_scripts). They will not only help you to start TellStore, but also one or several TPC-C servers.
+The simplest way to run the benchmark is to use the [Python Helper Scripts](https://github.com/tellproject/helper_scripts). They will not only help you to start TellStore, but also one or several TPC-C servers and clients.
 
 ### Server
 Of course, you can also run the server from the commandline. Depending on whether you want to use Tell or Kudu as the storage backend, execute one of the two lines below. This will print out to the console the commandline options you need to start the server:

@@ -24,6 +24,7 @@
 #include "CreateSchema.hpp"
 
 using namespace tell::db;
+using HashRing_t = tell::commitmanager::HashRing;
 
 namespace tpcc {
 
@@ -126,17 +127,17 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
         auto counter = tx.getCounter("history_counter");
         tell::db::key_t historyKey{counter.next()};
 
-        tx.insert(hTable, historyKey,
-                {{
-                {"h_c_id", customerKey.c_id},
-                {"h_c_d_id", customerKey.d_id},
-                {"h_c_w_id", customerKey.w_id},
-                {"h_d_id", in.d_id},
-                {"h_w_id", in.w_id},
-                {"h_date", now()},
-                {"h_amount", in.h_amount},
-                {"h_data", h_data}
-                }});
+        tx.insert(hTable, historyKey, {{
+            {"h_c_id", customerKey.c_id},
+            {"h_c_d_id", customerKey.d_id},
+            {"h_c_w_id", customerKey.w_id},
+            {"h_d_id", in.d_id},
+            {"h_w_id", in.w_id},
+            {"h_date", now()},
+            {"h_amount", in.h_amount},
+            {"h_data", h_data},
+            {"__partition_key", HashRing_t::getPartitionToken(hTable, historyKey)}
+        }});
         tx.commit();
         result.success = true;
     } catch (std::exception& ex) {

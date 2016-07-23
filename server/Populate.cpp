@@ -22,11 +22,14 @@
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
 #include "Populate.hpp"
+
 #include <telldb/Transaction.hpp>
+
 #include <chrono>
 #include <algorithm>
 
 using namespace tell::db;
+using HashRing_t = tell::commitmanager::HashRing;
 
 namespace tpcc {
 
@@ -46,7 +49,8 @@ void Populator::populateWarehouse(tell::db::Transaction &transaction,
     auto table = tIdFuture.get();
     tell::db::key_t key{uint64_t(w_id)};
     transaction.insert(table, key,
-                       {{{"w_id", w_id},
+                       {{{"__partition_key", HashRing_t::getPartitionToken(table, key)},
+                         {"w_id", w_id},
                          {"w_name", mRandom.astring(6, 10)},
                          {"w_street_1", mRandom.astring(10, 20)},
                          {"w_street_2", mRandom.astring(10, 20)},
@@ -63,13 +67,15 @@ void Populator::populateItems(tell::db::Transaction &transaction) {
     auto tIdFuture = transaction.openTable("item");
     auto tId = tIdFuture.get();
     for (int32_t i = 1; i <= 100000; ++i) {
-        transaction.insert(
-          tId, tell::db::key_t{uint64_t(i)},
-          {{{"i_id", i},
-            {"i_im_id", mRandom.randomWithin<int32_t>(1, 10000)},
-            {"i_name", mRandom.astring(14, 24)},
-            {"i_price", mRandom.randomWithin<int32_t>(100, 10000)},
-            {"i_data", mRandom.astring(26, 50)}}});
+        tell::db::key_t key{uint64_t(i)};
+        transaction.insert(tId, key, {{
+          {"__partition_key", HashRing_t::getPartitionToken(tId, key)},
+          {"i_id", i},
+          {"i_im_id", mRandom.randomWithin<int32_t>(1, 10000)},
+          {"i_name", mRandom.astring(14, 24)},
+          {"i_price", mRandom.randomWithin<int32_t>(100, 10000)},
+          {"i_data", mRandom.astring(26, 50)}
+        }});
     }
 }
 
@@ -88,6 +94,7 @@ void Populator::populateRegions(Transaction &transaction)
         int16_t intKey = static_cast<int16_t>(std::stoi(items[0]));
         tell::db::key_t key = tell::db::key_t{static_cast<uint64_t>(intKey)};
         transaction.insert(table, key, {{
+            {"__partition_key", HashRing_t::getPartitionToken(table, key)},
             {"r_regionkey", intKey},
             {"r_name", crossbow::string(items[1])},
             {"r_comment", crossbow::string(items[2])}
@@ -110,6 +117,7 @@ void Populator::populateNations(Transaction &transaction)
         int16_t intKey = static_cast<int16_t>(std::stoi(items[0]));
         tell::db::key_t key = tell::db::key_t{static_cast<uint64_t>(intKey)};
         transaction.insert(table, key, {{
+            {"__partition_key", HashRing_t::getPartitionToken(table, key)},
             {"n_nationkey", intKey},
             {"n_name", crossbow::string(items[1])},
             {"n_regionkey", static_cast<int16_t>(std::stoi(items[2]))},
@@ -135,6 +143,7 @@ void Populator::populateSuppliers(Transaction &transaction)
         std::string acctbal = items[5];
         acctbal.erase(acctbal.find("."), 1);
         transaction.insert(table, key, {{
+            {"__partition_key", HashRing_t::getPartitionToken(table, key)},
             {"su_suppkey", intKey},
             {"su_name", crossbow::string(items[1])},
             {"su_address", crossbow::string(items[2])},
@@ -164,24 +173,26 @@ void Populator::populateStocks(tell::db::Transaction &transaction,
             s_data.insert(iter, mOriginal.begin(), mOriginal.end());
         }
 
-        std::unordered_map<crossbow::string, Field> tuple =
-        {{{"s_i_id", s_i_id},
-        {"s_w_id", w_id},
-        {"s_quantity", int(mRandom.randomWithin(10, 100))},
-        {"s_dist_01", mRandom.astring(24, 24)},
-        {"s_dist_02", mRandom.astring(24, 24)},
-        {"s_dist_03", mRandom.astring(24, 24)},
-        {"s_dist_04", mRandom.astring(24, 24)},
-        {"s_dist_05", mRandom.astring(24, 24)},
-        {"s_dist_06", mRandom.astring(24, 24)},
-        {"s_dist_07", mRandom.astring(24, 24)},
-        {"s_dist_08", mRandom.astring(24, 24)},
-        {"s_dist_09", mRandom.astring(24, 24)},
-        {"s_dist_10", mRandom.astring(24, 24)},
-        {"s_ytd", int(0)},
-        {"s_order_cnt", int16_t(0)},
-        {"s_remote_cnt", int16_t(0)},
-        {"s_data", std::move(s_data)}}};
+        std::unordered_map<crossbow::string, Field> tuple = {{
+          {"__partition_key", HashRing_t::getPartitionToken(table, key)},
+          {"s_i_id", s_i_id},
+          {"s_w_id", w_id},
+          {"s_quantity", int(mRandom.randomWithin(10, 100))},
+          {"s_dist_01", mRandom.astring(24, 24)},
+          {"s_dist_02", mRandom.astring(24, 24)},
+          {"s_dist_03", mRandom.astring(24, 24)},
+          {"s_dist_04", mRandom.astring(24, 24)},
+          {"s_dist_05", mRandom.astring(24, 24)},
+          {"s_dist_06", mRandom.astring(24, 24)},
+          {"s_dist_07", mRandom.astring(24, 24)},
+          {"s_dist_08", mRandom.astring(24, 24)},
+          {"s_dist_09", mRandom.astring(24, 24)},
+          {"s_dist_10", mRandom.astring(24, 24)},
+          {"s_ytd", int(0)},
+          {"s_order_cnt", int16_t(0)},
+          {"s_remote_cnt", int16_t(0)},
+          {"s_data", std::move(s_data)}
+        }};
         if (useCH)
             tuple.emplace("s_su_suppkey", int16_t(mRandom.randomWithin(1,10000)));
 
@@ -200,7 +211,8 @@ void Populator::populateDistricts(tell::db::Transaction &transaction,
     for (int16_t i = 1u; i <= 10; ++i) {
         uint64_t key = keyBase | uint64_t(i);
         transaction.insert(table, tell::db::key_t{key},
-                           {{{"d_id", i},
+                           {{{"__partition_key", HashRing_t::getPartitionToken(table, key)},
+                             {"d_id", i},
                              {"d_w_id", w_id},
                              {"d_name", mRandom.astring(6, 10)},
                              {"d_street_1", mRandom.astring(10, 20)},
@@ -236,7 +248,8 @@ void Populator::populateCustomers(tell::db::Transaction &transaction,
         }
 
         std::unordered_map<crossbow::string, Field> tuple =
-            {{{"c_id", c_id},
+            {{{"__partition_key", HashRing_t::getPartitionToken(table, key)},
+              {"c_id", c_id},
               {"c_d_id", d_id},
               {"c_w_id", w_id},
               {"c_first", mRandom.astring(8, 16)},
@@ -273,7 +286,8 @@ void Populator::populateHistory(tell::db::Transaction &transaction,
     auto tIdFuture = transaction.openTable("history");
     auto table = tIdFuture.get();
     transaction.insert(table, tell::db::key_t{key},
-                       {{{"h_c_id", c_id},
+                       {{{"__partition_key", HashRing_t::getPartitionToken(table, key)},
+                         {"h_c_id", c_id},
                          {"h_c_d_id", d_id},
                          {"h_c_w_id", w_id},
                          {"h_d_id", d_id},
@@ -297,7 +311,8 @@ void Populator::populateOrders(tell::db::Transaction &transaction, int16_t d_id,
         auto o_ol_cnt = int16_t(mRandom.randomWithin(5, 15));
         tell::db::key_t key{baseKey | uint64_t(o_id)};
         std::unordered_map<crossbow::string, Field> t{
-          {{"o_id", o_id},
+          {{"__partition_key", HashRing_t::getPartitionToken(table, key)},
+           {"o_id", o_id},
            {"o_d_id", d_id},
            {"o_w_id", w_id},
            {"o_c_id", c_ids[o_id - 1]},
@@ -324,7 +339,8 @@ void Populator::populateOrderLines(tell::db::Transaction &transaction,
         tell::db::key_t key{baseKey | uint64_t(ol_number)};
         transaction.insert(
           table, key,
-          {{{"ol_o_id", o_id},
+          {{{"__partition_key", HashRing_t::getPartitionToken(table, key)},
+            {"ol_o_id", o_id},
             {"ol_d_id", d_id},
             {"ol_w_id", w_id},
             {"ol_number", ol_number},
@@ -359,9 +375,12 @@ void Populator::populateNewOrders(tell::db::Transaction &transaction,
     uint64_t baseKey = (uint64_t(w_id) << 5 * 8) | (uint64_t(d_id) << 4 * 8);
     for (int32_t o_id = 2101; o_id <= 3000; ++o_id) {
         tell::db::key_t key{baseKey | uint64_t(o_id)};
-        transaction.insert(
-          table, key,
-          {{{"no_o_id", o_id}, {"no_d_id", d_id}, {"no_w_id", w_id}}});
+        transaction.insert(table, key, {{
+          {"__partition_key", HashRing_t::getPartitionToken(table, key)},
+          {"no_o_id", o_id}, 
+          {"no_d_id", d_id}, 
+          {"no_w_id", w_id}
+        }});
     }
 }
 

@@ -25,6 +25,7 @@
 #include <common/Util.hpp>
 
 using namespace tell::db;
+using HashRing_t = tell::commitmanager::HashRing;
 
 namespace tpcc {
 
@@ -92,24 +93,24 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
         // insert order
         auto o_id = d_next_o_id.value<int32_t>();
         OrderKey oKey(w_id, d_id, o_id);
-        tx.insert(oTable, oKey.key(),
-                {{
-                {"o_id", o_id},
-                {"o_d_id", d_id},
-                {"o_w_id", w_id},
-                {"o_c_id", c_id},
-                {"o_entry_d", datetime},
-                {"o_carrier_id", nullptr},
-                {"o_ol_cnt", o_ol_cnt},
-                {"o_all_local", o_all_local}
-                }});
+        tx.insert(oTable, oKey.key(), {{
+            {"o_id", o_id},
+            {"o_d_id", d_id},
+            {"o_w_id", w_id},
+            {"o_c_id", c_id},
+            {"o_entry_d", datetime},
+            {"o_carrier_id", nullptr},
+            {"o_ol_cnt", o_ol_cnt},
+            {"o_all_local", o_all_local},
+            {"__partition_key", HashRing_t::getPartitionToken(oTable, oKey.key())}
+        }});
         // insert new-order
-        tx.insert(noTable, oKey.key(),
-                {{
-                {"no_o_id", o_id},
-                {"no_d_id", d_id},
-                {"no_w_id", w_id}
-                }});
+        tx.insert(noTable, oKey.key(), {{
+            {"no_o_id", o_id},
+            {"no_d_id", d_id},
+            {"no_w_id", w_id},
+            {"__partition_key", HashRing_t::getPartitionToken(noTable, oKey.key())}
+        }});
         // generate random items
         std::vector<int32_t> ol_i_id;
         ol_i_id.reserve(o_ol_cnt);
@@ -182,19 +183,19 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             int32_t ol_amount = i_price * int32_t(ol_quantity);
             ol_amount_sum += ol_amount;
             OrderlineKey olKey(w_id, d_id, o_id, ol_number);
-            tx.insert(olTable, olKey.key(),
-                    {{
-                    {"ol_o_id", o_id},
-                    {"ol_d_id", d_id},
-                    {"ol_w_id", w_id},
-                    {"ol_number", ol_number},
-                    {"ol_i_id", ol_i_id[i]},
-                    {"ol_supply_w_id", ol_supply_w_id[i]},
-                    {"ol_delivery_d", nullptr},
-                    {"ol_quantity", ol_quantity},
-                    {"ol_amount", ol_amount},
-                    {"ol_dist_info", ol_dist_info}
-                    }});
+            tx.insert(olTable, olKey.key(), {{
+                {"ol_o_id", o_id},
+                {"ol_d_id", d_id},
+                {"ol_w_id", w_id},
+                {"ol_number", ol_number},
+                {"ol_i_id", ol_i_id[i]},
+                {"ol_supply_w_id", ol_supply_w_id[i]},
+                {"ol_delivery_d", nullptr},
+                {"ol_quantity", ol_quantity},
+                {"ol_amount", ol_amount},
+                {"ol_dist_info", ol_dist_info},
+                {"__partition_key", HashRing_t::getPartitionToken(olTable, olKey.key())}
+            }});
             // set Result for this order line
             const auto& i_data = item.at("i_data").value<crossbow::string>();
             const auto& s_data = stock.at("s_data").value<crossbow::string>();

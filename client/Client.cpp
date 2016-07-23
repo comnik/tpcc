@@ -22,6 +22,7 @@
  *     Lucas Braun <braunl@inf.ethz.ch>
  */
 #include "Client.hpp"
+
 #include <common/Protocol.hpp>
 #include <crossbow/logger.hpp>
 

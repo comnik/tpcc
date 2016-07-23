@@ -33,7 +33,9 @@ void createWarehouse(db::Transaction& transaction) {
     // Warehouse table
     // w_id is used as primary key (since we are not issuing range queries)
     // w_id is a 16 bit number
+    LOG_INFO("Creating warehouse...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "w_id", true);
     schema.addField(store::FieldType::TEXT, "w_name", true);
     schema.addField(store::FieldType::TEXT, "w_street_1", true);
@@ -47,9 +49,11 @@ void createWarehouse(db::Transaction& transaction) {
 }
 
 void createDistrict(db::Transaction& transaction) {
+    LOG_INFO("Creating district...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
     // Primary key: (d_w_id, d_id)
     //              ( 2 b    1 byte
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "d_id", true);
     schema.addField(store::FieldType::SMALLINT, "d_w_id", true);
     schema.addField(store::FieldType::TEXT, "d_name", true);
@@ -69,7 +73,9 @@ void createCustomer(db::Transaction& transaction,  bool useCH) {
     // c_w_id: 2 bytes
     // c_d_id: 1 byte
     // c_id: 4 bytes
+    LOG_INFO("Creating customer...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "c_id", true);
     schema.addField(store::FieldType::SMALLINT, "c_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "c_w_id", true);
@@ -105,8 +111,10 @@ void createCustomer(db::Transaction& transaction,  bool useCH) {
 
 void createHistory(db::Transaction& transaction) {
     // this one has no primary key
+    LOG_INFO("Creating history...");
     transaction.createCounter("history_counter");
     store::Schema schema(store::TableType::TRANSACTIONAL);
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "h_c_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_c_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_c_w_id", true);
@@ -121,7 +129,9 @@ void createHistory(db::Transaction& transaction) {
 void createNewOrder(db::Transaction& transaction) {
     // Primary key: (no_w_id, no_d_id, no_o_id)
     //              (2 b    , 1 b    , 4 b    )
+    LOG_INFO("Creating new order...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "no_o_id", true);
     schema.addField(store::FieldType::SMALLINT, "no_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "no_w_id", true);
@@ -137,7 +147,9 @@ void createNewOrder(db::Transaction& transaction) {
 void createOrder(db::Transaction& transaction) {
     // Primary key: (o_w_id, o_d_id, o_id)
     //              (2 b   , 1 b   , 4 b )
+    LOG_INFO("Creating order...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "o_id", true);
     schema.addField(store::FieldType::SMALLINT, "o_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "o_w_id", true);
@@ -159,7 +171,9 @@ void createOrder(db::Transaction& transaction) {
 void createOrderLine(db::Transaction& transaction) {
     // Primary Key: (ol_w_id, ol_d_id, ol_o_id, ol_number)
     //              (2 b    , 1 b    , 4 b    , 1 b      )
+    LOG_INFO("Creating order line...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "ol_o_id", true);
     schema.addField(store::FieldType::SMALLINT, "ol_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "ol_w_id", true);
@@ -176,7 +190,9 @@ void createOrderLine(db::Transaction& transaction) {
 void createItem(db::Transaction& transaction) {
     // Primary key: (i_id)
     //              (4 b )
+    LOG_INFO("Creating item...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "i_id", true);
     schema.addField(store::FieldType::INT, "i_im_id", true);
     schema.addField(store::FieldType::TEXT, "i_name", true);
@@ -188,7 +204,9 @@ void createItem(db::Transaction& transaction) {
 void createStock(db::Transaction& transaction, bool useCH) {
     // Primary key: (s_w_id, s_i_id)
     //              ( 2 b  , 4 b   )
+    LOG_INFO("Creating stock...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "s_i_id", true);
     schema.addField(store::FieldType::SMALLINT, "s_w_id", true);
     schema.addField(store::FieldType::INT, "s_quantity", true);
@@ -214,7 +232,9 @@ void createStock(db::Transaction& transaction, bool useCH) {
 void createRegion(db::Transaction& transaction) {
     // Primary key: (r_regionkey)
     //              ( 2 b )
+    LOG_INFO("Creating region...");
     store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "r_regionkey", true);
     schema.addField(store::FieldType::TEXT, "r_name", true);
     schema.addField(store::FieldType::TEXT, "r_comment", true);
@@ -224,7 +244,9 @@ void createRegion(db::Transaction& transaction) {
 void createNation(db::Transaction& transaction) {
     // Primary key: (r_nationkey)
     //              ( 2 b )
+    LOG_INFO("Creating nation...");
     store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "n_nationkey", true);
     schema.addField(store::FieldType::TEXT, "n_name", true);
     schema.addField(store::FieldType::SMALLINT, "n_regionkey", true);
@@ -235,7 +257,9 @@ void createNation(db::Transaction& transaction) {
 void createSupplier(db::Transaction& transaction) {
     // Primary key: (su_suppkey)
     //              ( 2 b )
+    LOG_INFO("Creating supplier...");
     store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
+    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "su_suppkey", true);
     schema.addField(store::FieldType::TEXT, "su_name", true);
     schema.addField(store::FieldType::TEXT, "su_address", true);

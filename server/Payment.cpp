@@ -135,8 +135,7 @@ PaymentResult Transactions::payment(tell::db::Transaction& tx, const PaymentIn& 
             {"h_w_id", in.w_id},
             {"h_date", now()},
             {"h_amount", in.h_amount},
-            {"h_data", h_data},
-            {"__partition_key", HashRing_t::getPartitionToken(hTable, historyKey)}
+            {"h_data", h_data}
         }});
         tx.commit();
         result.success = true;

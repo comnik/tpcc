@@ -101,9 +101,11 @@ public:
                 auto counter = tx.getCounter("history_counter");
                 Populator populator;
                 populator.populateWarehouse(tx, counter, std::get<0>(args), std::get<1>(args));
+                
                 tx.commit();
                 success = true;
             } catch (std::exception& ex) {
+                LOG_ERROR("Caught excepion %1%", ex.what());
                 tx.rollback();
                 success = false;
                 msg = ex.what();

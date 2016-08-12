@@ -35,7 +35,6 @@ void createWarehouse(db::Transaction& transaction) {
     // w_id is a 16 bit number
     LOG_INFO("Creating warehouse...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "w_id", true);
     schema.addField(store::FieldType::TEXT, "w_name", true);
     schema.addField(store::FieldType::TEXT, "w_street_1", true);
@@ -45,6 +44,8 @@ void createWarehouse(db::Transaction& transaction) {
     schema.addField(store::FieldType::TEXT, "w_zip", true);
     schema.addField(store::FieldType::INT, "w_tax", true);          //numeric (4,4)
     schema.addField(store::FieldType::BIGINT, "w_ytd", true);       //numeric (12,2)
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     transaction.createTable("warehouse", schema);
 }
 
@@ -53,7 +54,6 @@ void createDistrict(db::Transaction& transaction) {
     store::Schema schema(store::TableType::TRANSACTIONAL);
     // Primary key: (d_w_id, d_id)
     //              ( 2 b    1 byte
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "d_id", true);
     schema.addField(store::FieldType::SMALLINT, "d_w_id", true);
     schema.addField(store::FieldType::TEXT, "d_name", true);
@@ -65,6 +65,8 @@ void createDistrict(db::Transaction& transaction) {
     schema.addField(store::FieldType::INT, "d_tax", true);          //numeric (4,4)
     schema.addField(store::FieldType::BIGINT, "d_ytd", true);       //numeric (12,2)
     schema.addField(store::FieldType::INT, "d_next_o_id", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     transaction.createTable("district", schema);
 }
 
@@ -75,7 +77,6 @@ void createCustomer(db::Transaction& transaction,  bool useCH) {
     // c_id: 4 bytes
     LOG_INFO("Creating customer...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "c_id", true);
     schema.addField(store::FieldType::SMALLINT, "c_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "c_w_id", true);
@@ -97,6 +98,7 @@ void createCustomer(db::Transaction& transaction,  bool useCH) {
     schema.addField(store::FieldType::SMALLINT, "c_payment_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "c_delivery_cnt", true);
     schema.addField(store::FieldType::TEXT, "c_data", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
     if (useCH)
         schema.addField(store::FieldType::SMALLINT, "c_n_nationkey", true);
     schema.addIndex("c_last_idx",
@@ -114,7 +116,6 @@ void createHistory(db::Transaction& transaction) {
     LOG_INFO("Creating history...");
     transaction.createCounter("history_counter");
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "h_c_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_c_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "h_c_w_id", true);
@@ -123,6 +124,8 @@ void createHistory(db::Transaction& transaction) {
     schema.addField(store::FieldType::BIGINT, "h_date", true);          //datetime (nanosecs since 1970)
     schema.addField(store::FieldType::INT, "h_amount", true);           //numeric (6,2)
     schema.addField(store::FieldType::TEXT, "h_data", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     transaction.createTable("history", schema);
 }
 
@@ -131,10 +134,11 @@ void createNewOrder(db::Transaction& transaction) {
     //              (2 b    , 1 b    , 4 b    )
     LOG_INFO("Creating new order...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "no_o_id", true);
     schema.addField(store::FieldType::SMALLINT, "no_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "no_w_id", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     schema.addIndex("new-order-idx",
             std::make_pair(true, std::vector<tell::store::Schema::id_t>{
                 schema.idOf("no_w_id")
@@ -149,7 +153,6 @@ void createOrder(db::Transaction& transaction) {
     //              (2 b   , 1 b   , 4 b )
     LOG_INFO("Creating order...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "o_id", true);
     schema.addField(store::FieldType::SMALLINT, "o_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "o_w_id", true);
@@ -158,6 +161,8 @@ void createOrder(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "o_carrier_id", false);
     schema.addField(store::FieldType::SMALLINT, "o_ol_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "o_all_local", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     schema.addIndex("order_idx",
             std::make_pair(true, std::vector<tell::store::Schema::id_t>{
                 schema.idOf("o_w_id")
@@ -173,7 +178,6 @@ void createOrderLine(db::Transaction& transaction) {
     //              (2 b    , 1 b    , 4 b    , 1 b      )
     LOG_INFO("Creating order line...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "ol_o_id", true);
     schema.addField(store::FieldType::SMALLINT, "ol_d_id", true);
     schema.addField(store::FieldType::SMALLINT, "ol_w_id", true);
@@ -184,6 +188,8 @@ void createOrderLine(db::Transaction& transaction) {
     schema.addField(store::FieldType::SMALLINT, "ol_quantity", true);
     schema.addField(store::FieldType::INT, "ol_amount", true);              //numeric (6,2)
     schema.addField(store::FieldType::TEXT, "ol_dist_info", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     transaction.createTable("order-line", schema);
 }
 
@@ -192,12 +198,13 @@ void createItem(db::Transaction& transaction) {
     //              (4 b )
     LOG_INFO("Creating item...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "i_id", true);
     schema.addField(store::FieldType::INT, "i_im_id", true);
     schema.addField(store::FieldType::TEXT, "i_name", true);
     schema.addField(store::FieldType::INT, "i_price", true);        // numeric (5,2)
     schema.addField(store::FieldType::TEXT, "i_data", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     transaction.createTable("item", schema);
 }
 
@@ -206,7 +213,6 @@ void createStock(db::Transaction& transaction, bool useCH) {
     //              ( 2 b  , 4 b   )
     LOG_INFO("Creating stock...");
     store::Schema schema(store::TableType::TRANSACTIONAL);
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::INT, "s_i_id", true);
     schema.addField(store::FieldType::SMALLINT, "s_w_id", true);
     schema.addField(store::FieldType::INT, "s_quantity", true);
@@ -224,6 +230,8 @@ void createStock(db::Transaction& transaction, bool useCH) {
     schema.addField(store::FieldType::SMALLINT, "s_order_cnt", true);
     schema.addField(store::FieldType::SMALLINT, "s_remote_cnt", true);
     schema.addField(store::FieldType::TEXT, "s_data", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     if (useCH)
         schema.addField(store::FieldType::SMALLINT, "s_su_suppkey", true);
     transaction.createTable("stock", schema);
@@ -234,10 +242,11 @@ void createRegion(db::Transaction& transaction) {
     //              ( 2 b )
     LOG_INFO("Creating region...");
     store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "r_regionkey", true);
     schema.addField(store::FieldType::TEXT, "r_name", true);
     schema.addField(store::FieldType::TEXT, "r_comment", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+    
     transaction.createTable("region", schema);
 }
 
@@ -246,11 +255,12 @@ void createNation(db::Transaction& transaction) {
     //              ( 2 b )
     LOG_INFO("Creating nation...");
     store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "n_nationkey", true);
     schema.addField(store::FieldType::TEXT, "n_name", true);
     schema.addField(store::FieldType::SMALLINT, "n_regionkey", true);
     schema.addField(store::FieldType::TEXT, "n_comment", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+
     transaction.createTable("nation", schema);
 }
 
@@ -259,7 +269,6 @@ void createSupplier(db::Transaction& transaction) {
     //              ( 2 b )
     LOG_INFO("Creating supplier...");
     store::Schema schema(store::TableType::TRANSACTIONAL);  // TODO: change to NON_TRANSACTIONAL once it is supported properly
-    schema.addField(store::FieldType::HASH128, "__partition_key", true);
     schema.addField(store::FieldType::SMALLINT, "su_suppkey", true);
     schema.addField(store::FieldType::TEXT, "su_name", true);
     schema.addField(store::FieldType::TEXT, "su_address", true);
@@ -267,6 +276,8 @@ void createSupplier(db::Transaction& transaction) {
     schema.addField(store::FieldType::TEXT, "su_phone", true);
     schema.addField(store::FieldType::BIGINT, "su_acctbal", true);  //numeric (12,2)
     schema.addField(store::FieldType::TEXT, "su_comment", true);
+    schema.addField(store::FieldType::HASH128, "__partition_token", true);
+ 
     transaction.createTable("supplier", schema);
 }
 

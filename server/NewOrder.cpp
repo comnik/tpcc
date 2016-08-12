@@ -101,15 +101,13 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
             {"o_entry_d", datetime},
             {"o_carrier_id", nullptr},
             {"o_ol_cnt", o_ol_cnt},
-            {"o_all_local", o_all_local},
-            {"__partition_key", HashRing_t::getPartitionToken(oTable, oKey.key())}
+            {"o_all_local", o_all_local}
         }});
         // insert new-order
         tx.insert(noTable, oKey.key(), {{
             {"no_o_id", o_id},
             {"no_d_id", d_id},
-            {"no_w_id", w_id},
-            {"__partition_key", HashRing_t::getPartitionToken(noTable, oKey.key())}
+            {"no_w_id", w_id}
         }});
         // generate random items
         std::vector<int32_t> ol_i_id;
@@ -193,8 +191,7 @@ NewOrderResult Transactions::newOrderTransaction(tell::db::Transaction& tx, cons
                 {"ol_delivery_d", nullptr},
                 {"ol_quantity", ol_quantity},
                 {"ol_amount", ol_amount},
-                {"ol_dist_info", ol_dist_info},
-                {"__partition_key", HashRing_t::getPartitionToken(olTable, olKey.key())}
+                {"ol_dist_info", ol_dist_info}
             }});
             // set Result for this order line
             const auto& i_data = item.at("i_data").value<crossbow::string>();

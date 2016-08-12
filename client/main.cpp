@@ -138,6 +138,7 @@ int main(int argc, const char** argv) {
             cmds.execute<tpcc::Command::CREATE_SCHEMA>(
                     [&clients, &useCHTables, numWarehouses](const err_code& ec,
                         const std::tuple<bool, crossbow::string>& res){
+                LOG_INFO("Created schema.");
                 if (ec) {
                     LOG_ERROR(ec.message());
                     return;
@@ -149,6 +150,7 @@ int main(int argc, const char** argv) {
 
                 auto& cmds = clients[0].commands();
                 cmds.execute<tpcc::Command::POPULATE_DIM_TABLES>([&clients, &useCHTables](const err_code& ec, const std::tuple<bool, crossbow::string>& res){
+                    LOG_INFO("Populated dim tables.");
                     if (ec) {
                         LOG_ERROR(ec.message());
                         return;
@@ -161,6 +163,7 @@ int main(int argc, const char** argv) {
                     for (auto& client : clients) {
                         client.populate(useCHTables);
                     }
+                    
                 }, useCHTables);
             }, std::make_tuple(int16_t(numWarehouses), useCHTables));
         } else {

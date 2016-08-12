@@ -59,7 +59,6 @@ void Client::execute(const typename Signature<C>::arguments &arg) {
 void Client::run() {
     auto n = rnd.random<int>(1, 100);
     if (n <= 4) {
-        LOG_DEBUG("Start stock-level Transaction");
         StockLevelIn args;
         args.w_id      = mCurrWarehouse;
         args.d_id      = mCurrDistrict;
@@ -67,13 +66,11 @@ void Client::run() {
         execute<Command::STOCK_LEVEL>(args);
         mCurrDistrict = mCurrDistrict == 10 ? 1 : (mCurrDistrict + 1);
     } else if (n <= 8) {
-        LOG_DEBUG("Start delivery Transaction");
         DeliveryIn arg;
         arg.w_id         = mCurrWarehouse;
         arg.o_carrier_id = rnd.random<int16_t>(1, 10);
         execute<Command::DELIVERY>(arg);
     } else if (n <= 12) {
-        LOG_DEBUG("Start order-status Transaction");
         OrderStatusIn arg;
         arg.w_id             = mCurrWarehouse;
         arg.d_id             = rnd.random<int16_t>(1, 10);
@@ -85,7 +82,6 @@ void Client::run() {
         }
         execute<Command::ORDER_STATUS>(arg);
     } else if (n <= 55) {
-        LOG_DEBUG("Start payment Transaction");
         PaymentIn arg;
         arg.w_id = mCurrWarehouse;
         arg.d_id = rnd.random<int16_t>(1, 10);
@@ -107,7 +103,6 @@ void Client::run() {
         arg.h_amount = rnd.random<int32_t>(100, 500000);
         execute<Command::PAYMENT>(arg);
     } else {
-        LOG_DEBUG("Start new-order Transaction");
         NewOrderIn arg;
         arg.w_id = mCurrWarehouse;
         arg.d_id = rnd.random<int16_t>(1, 10);
